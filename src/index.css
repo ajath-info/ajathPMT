@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Custom scrollbar utility */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(51, 65, 85, 0.8);
+}
+
+/* WYSIWYG Notes Editor Styles (Restores typography reset by Tailwind Preflight) */
+.notes-wysiwyg-editor h1,
+.notes-wysiwyg-editor h2,
+.notes-wysiwyg-editor h3 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  color: inherit;
+}
+
+.notes-wysiwyg-editor h4,
+.notes-wysiwyg-editor h5,
+.notes-wysiwyg-editor h6 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.notes-wysiwyg-editor ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.notes-wysiwyg-editor ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.notes-wysiwyg-editor li {
+  margin-bottom: 0.25rem;
+  display: list-item !important;
+}
+
+.notes-wysiwyg-editor blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 0.85rem;
+  margin: 0.75rem 0;
+  color: #64748b;
+  font-style: italic;
+  background: rgba(99, 102, 241, 0.05);
+  border-radius: 0 4px 4px 0;
+}
+
+.dark .notes-wysiwyg-editor blockquote {
+  border-left-color: #818cf8;
+  color: #94a3b8;
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.notes-wysiwyg-editor pre {
+  background-color: #f1f5f9;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.dark .notes-wysiwyg-editor pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+}
+
+.notes-wysiwyg-editor code {
+  background-color: #f1f5f9;
+  color: #ef4444;
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875em;
+}
+
+.dark .notes-wysiwyg-editor code {
+  background-color: #1e293b;
+  color: #f87171;
+}
+
+.notes-wysiwyg-editor a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dark .notes-wysiwyg-editor a {
+  color: #60a5fa;
+}
+
+.notes-wysiwyg-editor hr {
+  border: none;
+  border-top: 1px solid #cbd5e1;
+  margin: 1rem 0;
+}
+
+.dark .notes-wysiwyg-editor hr {
+  border-top-color: #334155;
+}
+
+.notes-wysiwyg-editor b,
+.notes-wysiwyg-editor strong {
+  font-weight: 700;
+}
+
+.notes-wysiwyg-editor i,
+.notes-wysiwyg-editor em {
+  font-style: italic;
+}
+
+.notes-wysiwyg-editor s,
+.notes-wysiwyg-editor strike,
+.notes-wysiwyg-editor del {
+  text-decoration: line-through;
+}
+
+.notes-wysiwyg-editor mark {
+  background-color: #fef08a;
+  color: #0f172a;
+  padding: 0.1rem 0.25rem;
+  border-radius: 0.2rem;
+}
+
+.notes-wysiwyg-editor[data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
