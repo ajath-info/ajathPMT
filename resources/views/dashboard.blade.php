@@ -11,6 +11,7 @@
     selectedColor: 'white',
     inviteRole: 'MEMBER',
     toggleStar(projId, el) {
+        const icon = el.querySelector('svg') || el.querySelector('i');
         fetch('/projects/' + projId + '/toggle-pin', {
             method: 'POST',
             headers: {
@@ -18,7 +19,15 @@
                 'Accept': 'application/json'
             }
         }).then(r => r.json()).then(data => {
-            el.dataset.pinned = data.is_pinned;
+            if (icon) {
+                if (data.is_pinned) {
+                    icon.classList.add('text-amber-400', 'fill-amber-400');
+                    icon.classList.remove('text-slate-300');
+                } else {
+                    icon.classList.remove('text-amber-400', 'fill-amber-400');
+                    icon.classList.add('text-slate-300');
+                }
+            }
         }).catch(() => {
             window.location.reload();
         });
