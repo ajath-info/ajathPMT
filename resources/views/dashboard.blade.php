@@ -270,6 +270,7 @@
             <div x-data="{
                     cardColor: '{{ $color }}',
                     popoverOpen: false,
+                    isStarred: {{ $proj->is_pinned ? 'true' : 'false' }},
                     colorMap: {
                         white:  'bg-white border-slate-200/90 hover:border-slate-300',
                         yellow: 'bg-[#fefce8] border-[#fde047] hover:border-[#eab308] border-t-4 border-t-[#eab308]',
@@ -294,6 +295,23 @@
                             },
                             body: JSON.stringify({ color_theme: c })
                         });
+                    },
+                    toggleStar() {
+                        this.isStarred = !this.isStarred; // Single click: grey -> yellow instantly!
+                        fetch('{{ route('projects.toggle-pin', $proj->id) }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            }
+                        }).then(r => r.json()).then(data => {
+                            this.isStarred = !!data.is_pinned;
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 280);
+                        }).catch(err => {
+                            console.error(err);
+                        });
                     }
                  }"
                  x-show="projectFilter === 'all' || (projectFilter === 'active' && '{{ $proj->status }}' === 'ACTIVE') || (projectFilter === 'archived' && '{{ $proj->status }}' === 'ARCHIVED')"
@@ -307,13 +325,21 @@
                             {{ $proj->name }}
                         </a>
 
-                        <!-- Star / Pin Toggle -->
+                        <!-- Star / Pin Toggle (Single click instant color change & auto-sort) -->
                         <button type="button" 
-                                @click="toggleStar({{ $proj->id }}, $el)" 
-                                :data-pinned="{{ $proj->is_pinned ? 'true' : 'false' }}"
-                                class="text-slate-300 hover:text-amber-400 flex-shrink-0 transition-colors pt-0.5" 
-                                title="Star this project">
-                            <i data-lucide="star" class="w-4 h-4" :class="$el.dataset.pinned === 'true' ? 'text-amber-400 fill-amber-400' : 'text-slate-300'"></i>
+                                @click.stop="toggleStar()" 
+                                class="flex-shrink-0 transition-transform hover:scale-125 pt-0.5 cursor-pointer focus:outline-none" 
+                                :title="isStarred ? 'Unstar this project' : 'Star this project'">
+                            <svg class="w-4 h-4 transition-colors duration-150" 
+                                 :class="isStarred ? 'text-amber-400 fill-amber-400' : 'text-slate-300 fill-transparent hover:text-amber-300'" 
+                                 xmlns="http://www.w3.org/2000/svg" 
+                                 viewBox="0 0 24 24" 
+                                 stroke="currentColor" 
+                                 stroke-width="2" 
+                                 stroke-linecap="round" 
+                                 stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
                         </button>
                     </div>
 

@@ -48,7 +48,20 @@ class DashboardController extends Controller
             });
         }
 
-        $projects = $projectQuery->orderByDesc('is_pinned')->latest()->get();
+        $allProjects = $projectQuery->get();
+
+        // 1. Starred (yellow) projects: shown on top, sorted by name ascending (A-Z)
+        $pinnedProjects = $allProjects->where('is_pinned', true)
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+
+        // 2. Other (unstarred) projects: shown below, sorted by date descending (latest first)
+        $otherProjects = $allProjects->where('is_pinned', false)
+            ->sortByDesc('created_at')
+            ->values();
+
+        // Merged in order: Starred on top (A-Z), Other below (date DESC)
+        $projects = $pinnedProjects->concat($otherProjects);
 
         // Calculate project progress
         foreach ($projects as $proj) {
