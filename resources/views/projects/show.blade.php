@@ -11,10 +11,14 @@
             <div class="space-y-1.5">
                 <div class="flex items-center gap-2">
                     <a href="{{ route('dashboard') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-700 flex items-center gap-1">
-                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Projects
+                        <i data-lucide="home" class="w-3.5 h-3.5"></i> Home
                     </a>
                     <span class="text-slate-300">/</span>
-                    <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">{{ $project->status }}</span>
+                    <a href="{{ route('projects.index') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-700 flex items-center gap-1">
+                        All Projects
+                    </a>
+                    <span class="text-slate-300">/</span>
+                    <span class="text-xs font-bold {{ $project->status === 'ACTIVE' ? 'text-emerald-600' : 'text-amber-600' }} uppercase tracking-wider">{{ $project->status }}</span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                     <span>{{ $project->name }}</span>

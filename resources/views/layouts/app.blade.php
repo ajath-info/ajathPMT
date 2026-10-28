@@ -98,6 +98,10 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                                 <i data-lucide="layout-grid" class="w-4 h-4 text-emerald-600"></i>
                                 <span>Home Dashboard</span>
                             </a>
+                            <a href="{{ route('projects.index') }}" class="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold">
+                                <i data-lucide="folder-kanban" class="w-4 h-4 text-[#199849]"></i>
+                                <span>All Projects</span>
+                            </a>
                             <a href="{{ route('people.index') }}" class="flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-50 font-semibold">
                                 <i data-lucide="users" class="w-4 h-4 text-indigo-600"></i>
                                 <span>People & Clients</span>
@@ -198,6 +202,16 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                         </a>
                         @endforeach
                     @endif
+
+                    <a href="{{ route('projects.index') }}" 
+                       x-show="searchQuery === '' || 'all projects list directory'.includes(searchQuery.toLowerCase())"
+                       class="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-100 transition-colors text-xs font-bold text-slate-800">
+                        <span class="flex items-center gap-2">
+                            <i data-lucide="folder-kanban" class="w-4 h-4 text-[#199849]"></i>
+                            <span>All Projects (Alphabetical Directory)</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400 font-medium">Projects</span>
+                    </a>
 
                     <a href="{{ route('people.index') }}" 
                        x-show="searchQuery === '' || 'people everyone clients'.includes(searchQuery.toLowerCase())"

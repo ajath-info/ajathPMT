@@ -23,9 +23,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/switch-org/{id}', [DashboardController::class, 'switchOrg'])->name('switch-org');
 
     // Projects
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::post('/projects/{id}/toggle-pin', [ProjectController::class, 'togglePin'])->name('projects.toggle-pin');
+    Route::post('/projects/{id}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
+    Route::post('/projects/{id}/unarchive', [ProjectController::class, 'unarchive'])->name('projects.unarchive');
+    Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
     Route::get('/projects/{id}', [ProjectController::class, 'show'])->name('projects.show');
 
     // Project Tools

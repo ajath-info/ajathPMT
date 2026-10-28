@@ -43,6 +43,55 @@ class ProjectController extends Controller
         return $orgMembership->role;
     }
 
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+        $orgId = session('active_org_id');
+        $org = Organization::findOrFail($orgId);
+
+        $membership = OrganizationMember::where('organization_id', $org->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $query = Project::where('organization_id', $org->id)
+            ->with(['members', 'tasks']);
+
+        if (!in_array($membership->role, ['OWNER', 'ADMIN'])) {
+            $query->whereHas('members', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
+        $allProjects = $query->orderBy('name', 'asc')->get();
+
+        $filter = $request->query('filter', 'active'); // 'active' or 'archived'
+
+        $activeProjects = $allProjects->where('status', 'ACTIVE')->values();
+        $archivedProjects = $allProjects->where('status', 'ARCHIVED')->values();
+
+        $displayProjects = ($filter === 'archived') ? $archivedProjects : $activeProjects;
+
+        // Group alphabetically by first character
+        $groupedProjects = $displayProjects->groupBy(function ($project) {
+            $first = strtoupper(substr(trim($project->name), 0, 1));
+            return ctype_alpha($first) ? $first : '#';
+        })->sortKeys();
+
+        // Distinct available letters for quick jump bar
+        $availableLetters = $groupedProjects->keys()->toArray();
+
+        return view('projects.index', compact(
+            'org',
+            'user',
+            'membership',
+            'groupedProjects',
+            'activeProjects',
+            'archivedProjects',
+            'availableLetters',
+            'filter'
+        ));
+    }
+
     public function create()
     {
         $user = Auth::user();
@@ -149,6 +198,44 @@ class ProjectController extends Controller
         }
 
         return back();
+    }
+
+    public function archive($id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $project->update(['status' => 'ARCHIVED']);
+
+        return back()->with('success', 'Project "' . $project->name . '" archived.');
+    }
+
+    public function unarchive($id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $project->update(['status' => 'ACTIVE']);
+
+        return back()->with('success', 'Project "' . $project->name . '" restored to active.');
+    }
+
+    public function destroy($id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $role = $this->checkProjectAccess($project, $user);
+
+        if (!in_array($role, ['OWNER', 'ADMIN'])) {
+            abort(403, 'Only admins or owners can delete a project.');
+        }
+
+        $projectName = $project->name;
+        $project->delete();
+
+        return redirect()->route('projects.index')->with('success', 'Project "' . $projectName . '" moved to trash.');
     }
 
     public function show($id)

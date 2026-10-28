@@ -234,9 +234,10 @@
 
         <!-- See all projects bottom pill -->
         <div class="text-center pt-8">
-            <button class="px-4 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs transition-colors">
-                See all projects
-            </button>
+            <a href="{{ route('projects.index') }}" class="inline-flex items-center gap-2 px-5 py-2 bg-slate-200/90 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition-all shadow-2xs hover:shadow-xs">
+                <span>See all projects</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </a>
         </div>
     </div>
 
