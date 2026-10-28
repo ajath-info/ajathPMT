@@ -500,5 +500,62 @@ class ProjectController extends Controller
 
         return back()->with('success', 'Message sent.');
     }
+
+    // SCHEDULE
+    public function schedule($id)
+    {
+        $user = Auth::user();
+        $project = Project::with('members')->findOrFail($id);
+        $userRole = $this->checkProjectAccess($project, $user);
+
+        $tasks = Task::with('assignee')
+            ->where('project_id', $project->id)
+            ->whereNotNull('due_date')
+            ->orderBy('due_date', 'asc')
+            ->get();
+
+        return view('projects.schedule', compact('project', 'user', 'userRole', 'tasks'));
+    }
+
+    // AUTOMATIC CHECK-INS
+    public function checkins($id)
+    {
+        $user = Auth::user();
+        $project = Project::with('members')->findOrFail($id);
+        $userRole = $this->checkProjectAccess($project, $user);
+
+        $checkin = \App\Models\Checkin::firstOrCreate(
+            ['project_id' => $project->id, 'question' => 'What did you work on today?'],
+            ['frequency' => 'DAILY', 'time' => '17:00:00', 'is_active' => true]
+        );
+
+        $answers = \App\Models\CheckinAnswer::with('user')
+            ->where('checkin_id', $checkin->id)
+            ->latest()
+            ->take(30)
+            ->get();
+
+        return view('projects.checkins', compact('project', 'user', 'userRole', 'checkin', 'answers'));
+    }
+
+    public function storeCheckinAnswer(Request $request, $id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $validated = $request->validate([
+            'checkin_id' => 'required|integer',
+            'answer' => 'required|string|max:5000',
+        ]);
+
+        \App\Models\CheckinAnswer::create([
+            'checkin_id' => $validated['checkin_id'],
+            'user_id' => $user->id,
+            'answer' => $validated['answer'],
+        ]);
+
+        return back()->with('success', 'Check-in response posted!');
+    }
 }
 

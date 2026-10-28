@@ -217,19 +217,23 @@
                         </div>
                         <h2 class="text-base font-bold text-slate-900">Schedule</h2>
                     </div>
+                    <a href="{{ route('projects.schedule', $project->id) }}" class="text-xs font-bold text-sky-600 hover:underline">Open</a>
                 </div>
                 <p class="text-xs text-slate-500">Every due date and milestone in this project is collected on the schedule.</p>
 
                 <div class="space-y-2 pt-2">
                     <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
                         <span class="text-[10px] font-bold text-sky-600">TARGET DELIVERY</span>
-                        <p class="text-xs font-bold text-slate-800">Sprint Milestone 1</p>
+                        <p class="text-xs font-bold text-slate-800">Sprint Milestones & Deadlines</p>
                     </div>
                 </div>
             </div>
 
             <div class="p-4 bg-slate-50/60 border-t border-slate-100 text-center">
-                <span class="text-xs font-bold text-slate-400">Synced automatically with to-do due dates</span>
+                <a href="{{ route('projects.schedule', $project->id) }}" class="text-xs font-bold text-slate-700 hover:text-sky-600 flex items-center justify-center gap-1">
+                    <span>View project schedule</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
             </div>
         </div>
 
@@ -243,6 +247,7 @@
                         </div>
                         <h2 class="text-base font-bold text-slate-900">Automatic Check-ins</h2>
                     </div>
+                    <a href="{{ route('projects.checkins', $project->id) }}" class="text-xs font-bold text-teal-600 hover:underline">Open</a>
                 </div>
                 <p class="text-xs text-slate-500">Ask the team automatic recurring questions so everyone stays in sync.</p>
 
@@ -253,7 +258,10 @@
             </div>
 
             <div class="p-4 bg-slate-50/60 border-t border-slate-100 text-center">
-                <span class="text-xs font-bold text-slate-400">Active every weekday at 5:00 PM</span>
+                <a href="{{ route('projects.checkins', $project->id) }}" class="text-xs font-bold text-slate-700 hover:text-teal-600 flex items-center justify-center gap-1">
+                    <span>Open automatic check-ins</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
             </div>
         </div>
 

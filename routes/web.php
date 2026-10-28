@@ -50,6 +50,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/{id}/chat', [ProjectController::class, 'chat'])->name('projects.chat');
     Route::post('/projects/{id}/chat', [ProjectController::class, 'storeChat'])->name('projects.chat.store');
 
+    Route::get('/projects/{id}/schedule', [ProjectController::class, 'schedule'])->name('projects.schedule');
+    Route::get('/projects/{id}/checkins', [ProjectController::class, 'checkins'])->name('projects.checkins');
+    Route::post('/projects/{id}/checkins', [ProjectController::class, 'storeCheckinAnswer'])->name('projects.checkins.store');
+
     // People & Clients
     Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
     Route::post('/people', [PeopleController::class, 'store'])->name('people.store');
