@@ -10,6 +10,41 @@
     projectFilter: 'active',
     selectedColor: 'white',
     inviteRole: 'MEMBER',
+    editingLogo: false,
+    displayMode: '{{ $currentOrg->logo_url === 'text_only' ? 'text' : 'logo' }}',
+    logoUrl: '{{ ($currentOrg->logo_url && $currentOrg->logo_url !== 'text_only') ? $currentOrg->logo_url : asset('images/logo.png') }}',
+    tempPreview: null,
+    isDragging: false,
+    previewLogo(e) {
+        const file = e.target.files[0];
+        if (file) {
+            this.tempPreview = URL.createObjectURL(file);
+        }
+    },
+    handleLogoDrop(e) {
+        this.isDragging = false;
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            this.$refs.logoFileInput.files = e.dataTransfer.files;
+            this.tempPreview = URL.createObjectURL(file);
+        }
+    },
+    saveTextOnly() {
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('mode', 'text');
+        fetch('{{ route('organization.logo') }}', {
+            method: 'POST',
+            headers: { 'Accept': 'application/json' },
+            body: formData
+        }).then(r => r.json()).then(data => {
+            this.displayMode = 'text';
+            this.editingLogo = false;
+            this.tempPreview = null;
+        }).catch(() => {
+            window.location.reload();
+        });
+    },
     toggleStar(projId, el) {
         const icon = el.querySelector('svg') || el.querySelector('i');
         fetch('/projects/' + projId + '/toggle-pin', {
@@ -37,28 +72,94 @@
     <!-- Top Hero Section: "Ai" Gradient Emblem & Action Bar -->
     <div class="flex flex-col items-center justify-center pt-2 pb-4 space-y-4">
         
-        <!-- Ai Fluid Ribbon Monogram Logo (matching screenshot) -->
-        <div class="relative w-28 h-20 flex items-center justify-center">
-            <svg viewBox="0 0 160 120" class="w-full h-full drop-shadow-md">
-                <defs>
-                    <linearGradient id="aiGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#ec4899" />
-                        <stop offset="50%" stop-color="#a855f7" />
-                        <stop offset="100%" stop-color="#6366f1" />
-                    </linearGradient>
-                    <linearGradient id="aiGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#6366f1" />
-                        <stop offset="100%" stop-color="#3b82f6" />
-                    </linearGradient>
-                </defs>
-                <!-- Stylized "A" loop -->
-                <path d="M 35,95 C 20,80 20,40 50,25 C 80,10 90,55 60,85 C 45,100 25,95 25,80 C 25,65 45,55 75,55" 
-                      fill="none" stroke="url(#aiGradient1)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
-                <!-- Stylized "i" stem & dot -->
-                <path d="M 125,50 L 125,95" 
-                      fill="none" stroke="url(#aiGradient2)" stroke-width="18" stroke-linecap="round" />
-                <circle cx="125" cy="22" r="10" fill="#6366f1" />
-            </svg>
+        <!-- Logo Area / Upload Box (Matching Basecamp screenshots) -->
+        <div class="w-full flex justify-center">
+            
+            <!-- 1. Normal View (when not editing) -->
+            <div x-show="!editingLogo" class="relative group inline-flex items-center justify-center">
+                <!-- Image Logo View -->
+                <div x-show="displayMode === 'logo'" class="flex items-center justify-center">
+                    <img :src="logoUrl" 
+                         alt="{{ $currentOrg->name }}" 
+                         class="h-20 sm:h-24 w-auto max-w-[260px] object-contain select-none cursor-pointer transition-transform group-hover:scale-[1.01]" 
+                         @click="editingLogo = true">
+                </div>
+
+                <!-- Company Name Text View (when 'Just display our company name' selected) -->
+                <div x-show="displayMode === 'text'" class="py-2">
+                    <h1 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight cursor-pointer hover:text-slate-900 transition-colors"
+                        @click="editingLogo = true">
+                        {{ $currentOrg->name }}
+                    </h1>
+                </div>
+
+                <!-- Settings Gear Icon on Hover (Matches media_1793203009707_94d5c896.png) -->
+                @if(in_array($userRole, ['OWNER', 'ADMIN']))
+                <button type="button" 
+                        @click="editingLogo = true" 
+                        class="absolute -top-1 -right-8 p-1 text-slate-400 hover:text-slate-700 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-slate-200/50" 
+                        title="Change logo or company name">
+                    <i data-lucide="settings" class="w-4 h-4 text-slate-500 hover:text-slate-800"></i>
+                </button>
+                @endif
+            </div>
+
+            <!-- 2. Edit Mode View (Matches media_1793203037855_b2659fc2.png) -->
+            <div x-show="editingLogo" x-cloak class="w-full max-w-sm mx-auto flex flex-col items-center space-y-2.5">
+                <form action="{{ route('organization.logo') }}" 
+                      method="POST" 
+                      enctype="multipart/form-data" 
+                      class="w-full flex flex-col items-center space-y-2.5">
+                    @csrf
+                    
+                    <!-- Dashed Border Box -->
+                    <div @click="$refs.logoFileInput.click()" 
+                         @dragover.prevent="isDragging = true" 
+                         @dragleave.prevent="isDragging = false" 
+                         @drop.prevent="handleLogoDrop($event)"
+                         :class="isDragging ? 'border-emerald-500 bg-emerald-50/50' : 'border-slate-300/90 bg-transparent hover:bg-white/60'"
+                         class="w-[280px] h-[95px] border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all">
+                        
+                        <template x-if="!tempPreview">
+                            <span class="text-sm font-semibold text-slate-600">Add your logo...</span>
+                        </template>
+
+                        <template x-if="tempPreview">
+                            <img :src="tempPreview" class="h-16 max-w-[240px] object-contain">
+                        </template>
+
+                        <input x-ref="logoFileInput" 
+                               type="file" 
+                               name="logo" 
+                               accept="image/*" 
+                               class="hidden" 
+                               @change="previewLogo($event)">
+                    </div>
+
+                    <!-- Save and Cancel Buttons -->
+                    <div class="flex items-center justify-center gap-2">
+                        <button type="submit" 
+                                class="px-4 py-1.5 bg-[#2870c9] hover:bg-[#1f5ca8] text-white font-semibold text-xs rounded-lg shadow-2xs transition-all">
+                            Save
+                        </button>
+                        <button type="button" 
+                                @click="editingLogo = false; tempPreview = null;" 
+                                class="px-4 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-lg border border-slate-300 shadow-2xs transition-all">
+                            Cancel
+                        </button>
+                    </div>
+
+                    <!-- Just display our company name link -->
+                    <div>
+                        <button type="button" 
+                                @click="saveTextOnly()" 
+                                class="text-xs text-slate-600 hover:text-slate-900 underline underline-offset-2 transition-colors">
+                            Just display our company name
+                        </button>
+                    </div>
+                </form>
+            </div>
+
         </div>
 
         <!-- Search / Jump keyboard prompt -->

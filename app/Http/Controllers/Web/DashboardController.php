@@ -106,4 +106,68 @@ class DashboardController extends Controller
 
         return redirect()->route('dashboard');
     }
+
+    public function updateLogo(Request $request)
+    {
+        $user = Auth::user();
+        $orgId = session('active_org_id');
+        $org = Organization::findOrFail($orgId);
+
+        $membership = OrganizationMember::where('organization_id', $org->id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$membership || !in_array($membership->role, ['OWNER', 'ADMIN'])) {
+            if ($request->wantsJson()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
+            return back()->with('error', 'Only owners and admins can update the workspace logo.');
+        }
+
+        // Mode: Just display company name
+        if ($request->input('mode') === 'text') {
+            $org->logo_url = 'text_only';
+            $org->save();
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'mode' => 'text',
+                    'company_name' => $org->name
+                ]);
+            }
+            return back()->with('success', 'Workspace set to display company name.');
+        }
+
+        // Mode: Upload image
+        $request->validate([
+            'logo' => 'required|image|mimes:png,jpg,jpeg,svg,webp,gif|max:5120',
+        ]);
+
+        if ($request->hasFile('logo')) {
+            $file = $request->file('logo');
+            $uploadDir = public_path('uploads/logos');
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $filename = 'logo_' . $org->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($uploadDir, $filename);
+
+            $org->logo_url = '/uploads/logos/' . $filename;
+            $org->save();
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'mode' => 'logo',
+                    'logo_url' => asset('uploads/logos/' . $filename)
+                ]);
+            }
+
+            return back()->with('success', 'Workspace logo updated successfully!');
+        }
+
+        return back();
+    }
 }

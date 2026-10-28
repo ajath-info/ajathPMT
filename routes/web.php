@@ -21,6 +21,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/switch-org/{id}', [DashboardController::class, 'switchOrg'])->name('switch-org');
+    Route::post('/organization/logo', [DashboardController::class, 'updateLogo'])->name('organization.logo');
 
     // Projects
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
