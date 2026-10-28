@@ -170,12 +170,60 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
     <!-- Basecamp Floating Bottom Dock: My Stuff (Matches Basecamp 4 UI) -->
     <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg py-2.5 px-4 sm:px-8">
         <div class="max-w-[1400px] mx-auto flex items-center justify-between">
-            <!-- Left: Current User Avatar Profile -->
+            <!-- Left: Current User Avatar Profile & "My Account" Popover (Matches Basecamp UI) -->
             @auth
-            <a href="{{ route('my.activity') }}" class="flex items-center gap-2 group" title="Signed in as {{ Auth::user()->name }}">
-                <img src="{{ Auth::user()->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode(Auth::user()->name) }}" 
-                     class="w-7 h-7 rounded-full border border-slate-300 object-cover shadow-2xs group-hover:scale-105 transition-transform">
-            </a>
+            <div class="relative" x-data="{ accountMenu: false }">
+                <button type="button" 
+                        @click="accountMenu = !accountMenu" 
+                        class="flex items-center gap-2 group cursor-pointer focus:outline-none" 
+                        title="My Account">
+                    <img src="{{ Auth::user()->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode(Auth::user()->name) }}" 
+                         class="w-7 h-7 rounded-full border border-slate-300 object-cover shadow-2xs group-hover:scale-110 transition-transform">
+                </button>
+
+                <!-- My Account Popover (Matches screenshot media_1793216011051_5814849e.png) -->
+                <div x-show="accountMenu" 
+                     x-cloak 
+                     @click.outside="accountMenu = false" 
+                     class="absolute bottom-11 left-0 z-50 w-56 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2.5 animate-in fade-in zoom-in-95">
+                    
+                    <div class="px-4 pb-2 border-b border-slate-100">
+                        <h4 class="text-xs font-black text-[#9c2f0f] tracking-wide">My Account</h4>
+                    </div>
+
+                    <div class="py-1 text-xs font-bold text-slate-700">
+                        <a href="{{ route('my.profile') }}" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                            <i data-lucide="user" class="w-4 h-4 text-slate-500"></i>
+                            <span>My Profile</span>
+                        </a>
+
+                        <a href="{{ route('my.drafts') }}" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                            <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
+                            <span>My Drafts</span>
+                        </a>
+
+                        <a href="{{ route('my.boosts') }}" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                            <i data-lucide="rocket" class="w-4 h-4 text-slate-500"></i>
+                            <span>My Boosts</span>
+                        </a>
+
+                        <a href="{{ route('my.settings') }}" class="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                            <i data-lucide="settings" class="w-4 h-4 text-slate-500"></i>
+                            <span>Account & Settings</span>
+                        </a>
+
+                        <div class="pt-1 mt-1 border-t border-slate-100">
+                            <form action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="w-full flex items-center gap-3 px-4 py-2 text-rose-600 hover:bg-rose-50 transition-colors text-left font-bold cursor-pointer">
+                                    <i data-lucide="log-out" class="w-4 h-4 text-rose-500"></i>
+                                    <span>Log out</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
             @else
             <div class="w-7"></div>
             @endauth

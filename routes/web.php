@@ -61,7 +61,17 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/people', [PeopleController::class, 'store'])->name('people.store');
     Route::delete('/people/{userId}', [PeopleController::class, 'destroy'])->name('people.destroy');
 
-    // My Stuff & Personal Dock
+    // My Stuff & Personal Dock (Matches Basecamp 4 UI)
+    Route::get('/my/profile', [MyStuffController::class, 'profile'])->name('my.profile');
+    Route::post('/my/profile', [MyStuffController::class, 'updateProfile'])->name('my.profile.update');
+    Route::get('/my/drafts', [MyStuffController::class, 'drafts'])->name('my.drafts');
+    Route::post('/my/drafts', [MyStuffController::class, 'saveDraft'])->name('my.drafts.save');
+    Route::delete('/my/drafts/{id}', [MyStuffController::class, 'deleteDraft'])->name('my.drafts.delete');
+    Route::get('/my/boosts', [MyStuffController::class, 'boosts'])->name('my.boosts');
+    Route::post('/my/boosts', [MyStuffController::class, 'giveBoost'])->name('my.boosts.give');
+    Route::get('/my/settings', [MyStuffController::class, 'settings'])->name('my.settings');
+    Route::post('/my/settings', [MyStuffController::class, 'updateSettings'])->name('my.settings.update');
+
     Route::get('/my/tasks', [MyStuffController::class, 'tasks'])->name('my.tasks');
     Route::get('/my/events', [MyStuffController::class, 'events'])->name('my.events');
     Route::get('/my/bookmarks', [MyStuffController::class, 'bookmarks'])->name('my.bookmarks');
