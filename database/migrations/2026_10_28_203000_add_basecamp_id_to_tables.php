@@ -48,3 +48,4 @@ return new class extends Migration
         Schema::table('documents', fn (Blueprint $table) => $table->dropColumn('basecamp_id'));
     }
 };
+
