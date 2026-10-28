@@ -239,16 +239,17 @@
             @php
                 $color = $proj->color_theme ?? 'white';
                 $cardStyles = [
-                    'yellow' => 'bg-[#fefce8] border-amber-300 hover:border-amber-400',
-                    'amber'  => 'bg-[#fffbeb] border-amber-200 border-t-4 border-t-orange-400 hover:border-orange-300',
-                    'peach'  => 'bg-[#fff7ed] border-orange-200 border-t-4 border-t-orange-400 hover:border-orange-300',
-                    'rose'   => 'bg-[#fdf2f8] border-pink-200 border-t-4 border-t-pink-400 hover:border-pink-300',
-                    'purple' => 'bg-[#f5f3ff] border-purple-200 border-t-4 border-t-purple-400 hover:border-purple-300',
-                    'sky'    => 'bg-[#f0f9ff] border-sky-300 hover:border-sky-400',
-                    'mint'   => 'bg-[#f0fdf4] border-emerald-200 border-t-4 border-t-emerald-500 hover:border-emerald-300',
-                    'slate'  => 'bg-[#f8fafc] border-slate-200 hover:border-slate-300',
-                    'white'  => 'bg-white border-slate-200 hover:border-slate-300',
-                ][$color] ?? 'bg-white border-slate-200 hover:border-slate-300';
+                    'yellow' => 'bg-[#fefce8] border-[#fde047] hover:border-[#eab308] border-t-4 border-t-[#eab308]',
+                    'orange' => 'bg-[#fff7ed] border-[#fed7aa] hover:border-[#f97316] border-t-4 border-t-[#f97316]',
+                    'coral'  => 'bg-[#fff1f2] border-[#fecdd3] hover:border-[#f43f5e] border-t-4 border-t-[#f43f5e]',
+                    'pink'   => 'bg-[#fdf2f8] border-[#fbcfe8] hover:border-[#ec4899] border-t-4 border-t-[#ec4899]',
+                    'purple' => 'bg-[#f5f3ff] border-[#ddd6fe] hover:border-[#8b5cf6] border-t-4 border-t-[#8b5cf6]',
+                    'blue'   => 'bg-[#eff6ff] border-[#bfdbfe] hover:border-[#3b82f6] border-t-4 border-t-[#3b82f6]',
+                    'green'  => 'bg-[#f0fdf4] border-[#bbf7d0] hover:border-[#22c55e] border-t-4 border-t-[#22c55e]',
+                    'sand'   => 'bg-[#fbf7ee] border-[#e7dcce] hover:border-[#b49770] border-t-4 border-t-[#b49770]',
+                    'gray'   => 'bg-[#f8fafc] border-[#e2e8f0] hover:border-[#94a3b8] border-t-4 border-t-[#94a3b8]',
+                    'white'  => 'bg-white border-slate-200/90 hover:border-slate-300',
+                ][$color] ?? 'bg-white border-slate-200/90 hover:border-slate-300';
 
                 $avatarColors = [
                     'SN' => 'bg-purple-600',
@@ -266,8 +267,38 @@
                 ];
             @endphp
 
-            <div x-show="projectFilter === 'all' || (projectFilter === 'active' && '{{ $proj->status }}' === 'ACTIVE') || (projectFilter === 'archived' && '{{ $proj->status }}' === 'ARCHIVED')"
-                 class="relative rounded-2xl {{ $cardStyles }} p-4 h-[160px] flex flex-col justify-between transition-all basecamp-card-shadow group">
+            <div x-data="{
+                    cardColor: '{{ $color }}',
+                    popoverOpen: false,
+                    colorMap: {
+                        white:  'bg-white border-slate-200/90 hover:border-slate-300',
+                        yellow: 'bg-[#fefce8] border-[#fde047] hover:border-[#eab308] border-t-4 border-t-[#eab308]',
+                        orange: 'bg-[#fff7ed] border-[#fed7aa] hover:border-[#f97316] border-t-4 border-t-[#f97316]',
+                        coral:  'bg-[#fff1f2] border-[#fecdd3] hover:border-[#f43f5e] border-t-4 border-t-[#f43f5e]',
+                        pink:   'bg-[#fdf2f8] border-[#fbcfe8] hover:border-[#ec4899] border-t-4 border-t-[#ec4899]',
+                        purple: 'bg-[#f5f3ff] border-[#ddd6fe] hover:border-[#8b5cf6] border-t-4 border-t-[#8b5cf6]',
+                        blue:   'bg-[#eff6ff] border-[#bfdbfe] hover:border-[#3b82f6] border-t-4 border-t-[#3b82f6]',
+                        green:  'bg-[#f0fdf4] border-[#bbf7d0] hover:border-[#22c55e] border-t-4 border-t-[#22c55e]',
+                        sand:   'bg-[#fbf7ee] border-[#e7dcce] hover:border-[#b49770] border-t-4 border-t-[#b49770]',
+                        gray:   'bg-[#f8fafc] border-[#e2e8f0] hover:border-[#94a3b8] border-t-4 border-t-[#94a3b8]'
+                    },
+                    updateColor(c) {
+                        this.cardColor = c;
+                        this.popoverOpen = false;
+                        fetch('{{ route('projects.color', $proj->id) }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ color_theme: c })
+                        });
+                    }
+                 }"
+                 x-show="projectFilter === 'all' || (projectFilter === 'active' && '{{ $proj->status }}' === 'ACTIVE') || (projectFilter === 'archived' && '{{ $proj->status }}' === 'ARCHIVED')"
+                 :class="colorMap[cardColor] || colorMap['white']"
+                 class="relative rounded-2xl p-4 h-[165px] flex flex-col justify-between transition-all duration-200 basecamp-card-shadow group border">
                 
                 <!-- Card Header: Title, Subtitle, Star -->
                 <div>
@@ -299,12 +330,11 @@
                     @endif
                 </div>
 
-                <!-- Bottom Row: Overlapping Member Avatars & Progress Indicator -->
+                <!-- Bottom Row: Overlapping Member Avatars, Donut, and Rainbow Color Picker -->
                 <div class="flex items-center justify-between pt-2">
                     <div class="flex items-center -space-x-1.5">
                         @foreach($proj->members->take(6) as $m)
                         @php
-                            // Extract 2-letter initials
                             $words = explode(' ', trim($m->name));
                             $inits = count($words) >= 2 
                                 ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
@@ -326,10 +356,47 @@
                         @endif
                     </div>
 
-                    <!-- Little Progress Donut on card (matching screenshot) -->
-                    @if(isset($proj->progress) && $proj->progress > 0)
-                    <div class="w-4 h-4 rounded-full border-2 border-orange-300 border-t-orange-500 animate-spin-none" title="{{ $proj->progress }}% completed"></div>
-                    @endif
+                    <!-- Right of Bottom Row: Donut + Palette Ring Button with Popover -->
+                    <div class="flex items-center gap-2">
+                        <!-- Progress Donut (if present) -->
+                        @if(isset($proj->progress) && $proj->progress > 0)
+                        <div class="w-4 h-4 rounded-full border-2 border-orange-300 border-t-orange-500 animate-spin-none" title="{{ $proj->progress }}% completed"></div>
+                        @endif
+
+                        <!-- Rainbow Palette Ring Button & Swatches Popover (Matches Basecamp screenshot) -->
+                        <div class="relative">
+                            <button type="button" 
+                                    @click.stop="popoverOpen = !popoverOpen" 
+                                    class="w-5 h-5 rounded-full p-0.5 border border-slate-300/80 hover:scale-110 transition-transform bg-white shadow-2xs flex items-center justify-center cursor-pointer" 
+                                    title="Choose card color">
+                                <div class="w-3.5 h-3.5 rounded-full" style="background: conic-gradient(#ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444);"></div>
+                            </button>
+
+                            <!-- 10-Swatch Popover (Exact match to Basecamp color picker) -->
+                            <div x-show="popoverOpen" 
+                                 x-cloak 
+                                 @click.outside="popoverOpen = false" 
+                                 class="absolute bottom-7 right-0 z-50 p-2.5 bg-white rounded-2xl shadow-xl border border-slate-200 w-44 animate-in fade-in zoom-in-95">
+                                <div class="grid grid-cols-5 gap-2">
+                                    <!-- Row 1 -->
+                                    <button type="button" @click="updateColor('white')" class="w-6 h-6 rounded-full border border-slate-300 relative flex items-center justify-center hover:scale-110 transition-transform bg-white shadow-2xs" title="Default (White)">
+                                        <span class="w-[1.5px] h-5 bg-rose-500 rotate-45 transform"></span>
+                                    </button>
+                                    <button type="button" @click="updateColor('yellow')" class="w-6 h-6 rounded-full bg-[#eab308] hover:scale-110 transition-transform shadow-2xs" title="Yellow"></button>
+                                    <button type="button" @click="updateColor('orange')" class="w-6 h-6 rounded-full bg-[#f97316] hover:scale-110 transition-transform shadow-2xs" title="Orange"></button>
+                                    <button type="button" @click="updateColor('coral')" class="w-6 h-6 rounded-full bg-[#f43f5e] hover:scale-110 transition-transform shadow-2xs" title="Coral"></button>
+                                    <button type="button" @click="updateColor('pink')" class="w-6 h-6 rounded-full bg-[#ec4899] hover:scale-110 transition-transform shadow-2xs" title="Pink"></button>
+
+                                    <!-- Row 2 -->
+                                    <button type="button" @click="updateColor('purple')" class="w-6 h-6 rounded-full bg-[#8b5cf6] hover:scale-110 transition-transform shadow-2xs" title="Purple"></button>
+                                    <button type="button" @click="updateColor('blue')" class="w-6 h-6 rounded-full bg-[#38bdf8] hover:scale-110 transition-transform shadow-2xs" title="Blue"></button>
+                                    <button type="button" @click="updateColor('green')" class="w-6 h-6 rounded-full bg-[#22c55e] hover:scale-110 transition-transform shadow-2xs" title="Green"></button>
+                                    <button type="button" @click="updateColor('sand')" class="w-6 h-6 rounded-full bg-[#b49770] hover:scale-110 transition-transform shadow-2xs" title="Sand"></button>
+                                    <button type="button" @click="updateColor('gray')" class="w-6 h-6 rounded-full bg-[#64748b] hover:scale-110 transition-transform shadow-2xs" title="Gray"></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -386,7 +453,7 @@
                         <textarea name="description" rows="2" placeholder="Brief scope of work..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
                     </div>
 
-                    <!-- Basecamp Pastel Color Picker -->
+                    <!-- Basecamp 10 Professional Color Themes -->
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Card Color Accent</label>
                         <div class="grid grid-cols-5 gap-2">
@@ -399,24 +466,36 @@
                                 <span class="text-[10px] font-bold text-amber-700 ml-1">Yellow</span>
                             </label>
                             <label class="flex items-center justify-center p-2 rounded-xl bg-[#fff7ed] border border-orange-300 cursor-pointer">
-                                <input type="radio" name="color_theme" value="peach" class="text-orange-500">
-                                <span class="text-[10px] font-bold text-orange-700 ml-1">Peach</span>
+                                <input type="radio" name="color_theme" value="orange" class="text-orange-500">
+                                <span class="text-[10px] font-bold text-orange-700 ml-1">Orange</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#fff1f2] border border-rose-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="coral" class="text-rose-500">
+                                <span class="text-[10px] font-bold text-rose-700 ml-1">Coral</span>
                             </label>
                             <label class="flex items-center justify-center p-2 rounded-xl bg-[#fdf2f8] border border-pink-300 cursor-pointer">
-                                <input type="radio" name="color_theme" value="rose" class="text-pink-500">
-                                <span class="text-[10px] font-bold text-pink-700 ml-1">Rose</span>
+                                <input type="radio" name="color_theme" value="pink" class="text-pink-500">
+                                <span class="text-[10px] font-bold text-pink-700 ml-1">Pink</span>
                             </label>
                             <label class="flex items-center justify-center p-2 rounded-xl bg-[#f5f3ff] border border-purple-300 cursor-pointer">
                                 <input type="radio" name="color_theme" value="purple" class="text-purple-500">
                                 <span class="text-[10px] font-bold text-purple-700 ml-1">Purple</span>
                             </label>
-                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#f0f9ff] border border-sky-300 cursor-pointer">
-                                <input type="radio" name="color_theme" value="sky" class="text-sky-500">
-                                <span class="text-[10px] font-bold text-sky-700 ml-1">Sky</span>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#eff6ff] border border-sky-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="blue" class="text-sky-500">
+                                <span class="text-[10px] font-bold text-sky-700 ml-1">Blue</span>
                             </label>
                             <label class="flex items-center justify-center p-2 rounded-xl bg-[#f0fdf4] border border-emerald-300 cursor-pointer">
-                                <input type="radio" name="color_theme" value="mint" class="text-emerald-500">
-                                <span class="text-[10px] font-bold text-emerald-700 ml-1">Mint</span>
+                                <input type="radio" name="color_theme" value="green" class="text-emerald-500">
+                                <span class="text-[10px] font-bold text-emerald-700 ml-1">Green</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#fbf7ee] border border-amber-200 cursor-pointer">
+                                <input type="radio" name="color_theme" value="sand" class="text-amber-700">
+                                <span class="text-[10px] font-bold text-amber-800 ml-1">Sand</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#f8fafc] border border-slate-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="gray" class="text-slate-600">
+                                <span class="text-[10px] font-bold text-slate-700 ml-1">Gray</span>
                             </label>
                         </div>
                     </div>

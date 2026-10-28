@@ -200,6 +200,29 @@ class ProjectController extends Controller
         return back();
     }
 
+    public function updateColor(Request $request, $id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $validated = $request->validate([
+            'color_theme' => 'required|string|in:white,yellow,orange,coral,pink,purple,blue,green,sand,gray'
+        ]);
+
+        $project->color_theme = $validated['color_theme'];
+        $project->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'color_theme' => $project->color_theme
+            ]);
+        }
+
+        return back()->with('success', 'Project color updated.');
+    }
+
     public function archive($id)
     {
         $user = Auth::user();

@@ -117,11 +117,11 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                 <!-- Right: Pings/Notifications, Fullscreen, User & Logout -->
                 <div class="flex items-center gap-2">
                     
-                    <!-- Pings ~ Notifications Pill Button -->
-                    <button @click="pingsModal = true" class="flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-full border border-slate-300/80 shadow-2xs transition-all">
-                        <i data-lucide="bell" class="w-3.5 h-3.5 text-slate-600"></i>
-                        <span>Pings ~ Notifications</span>
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <!-- Pings + 🔴 New for you (Matches Basecamp UI) -->
+                    <button @click="pingsModal = true" class="flex items-center gap-1.5 px-3.5 py-1 bg-[#fee4d7] hover:bg-[#fed6c3] text-[#9c2f0f] font-bold text-xs rounded-full border border-[#fccfbe] shadow-2xs transition-all">
+                        <span>Pings +</span>
+                        <span class="w-2 h-2 rounded-full bg-[#ef4444] animate-pulse"></span>
+                        <span>New for you</span>
                     </button>
 
                     <!-- Fullscreen Expand Button -->
@@ -163,9 +163,49 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
     @endif
 
     <!-- Main Content Container -->
-    <main class="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <main class="flex-1 max-w-[1400px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
         @yield('content')
     </main>
+
+    <!-- Basecamp Floating Bottom Dock: My Stuff (Matches Basecamp 4 UI) -->
+    <div class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg py-2.5 px-4 sm:px-8">
+        <div class="max-w-[1400px] mx-auto flex items-center justify-between">
+            <!-- Left: Current User Avatar Profile -->
+            @auth
+            <a href="{{ route('my.activity') }}" class="flex items-center gap-2 group" title="Signed in as {{ Auth::user()->name }}">
+                <img src="{{ Auth::user()->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode(Auth::user()->name) }}" 
+                     class="w-7 h-7 rounded-full border border-slate-300 object-cover shadow-2xs group-hover:scale-105 transition-transform">
+            </a>
+            @else
+            <div class="w-7"></div>
+            @endauth
+
+            <!-- Center: My Tasks, My Events, My Bookmarks, My Activity, My Notes -->
+            <nav class="flex items-center gap-3 sm:gap-8 text-xs font-bold text-slate-700 overflow-x-auto py-0.5">
+                <a href="{{ route('my.tasks') }}" class="hover:text-emerald-700 transition-colors whitespace-nowrap {{ request()->routeIs('my.tasks') ? 'text-emerald-700 underline underline-offset-4' : '' }}">
+                    My Tasks
+                </a>
+                <a href="{{ route('my.events') }}" class="hover:text-emerald-700 transition-colors whitespace-nowrap {{ request()->routeIs('my.events') ? 'text-emerald-700 underline underline-offset-4' : '' }}">
+                    My Events
+                </a>
+                <a href="{{ route('my.bookmarks') }}" class="hover:text-emerald-700 transition-colors whitespace-nowrap {{ request()->routeIs('my.bookmarks') ? 'text-emerald-700 underline underline-offset-4' : '' }}">
+                    My Bookmarks
+                </a>
+                <a href="{{ route('my.activity') }}" class="hover:text-emerald-700 transition-colors whitespace-nowrap {{ request()->routeIs('my.activity') ? 'text-emerald-700 underline underline-offset-4' : '' }}">
+                    My Activity
+                </a>
+                <a href="{{ route('my.notes') }}" class="hover:text-emerald-700 transition-colors whitespace-nowrap {{ request()->routeIs('my.notes') ? 'text-emerald-700 underline underline-offset-4' : '' }}">
+                    My Notes
+                </a>
+            </nav>
+
+            <!-- Right: Support -->
+            <a href="{{ route('my.support') }}" class="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors flex-shrink-0" title="Help & Support">
+                <i data-lucide="help-circle" class="w-4 h-4 text-slate-500"></i>
+                <span class="hidden sm:inline">Support</span>
+            </a>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="py-6 text-center text-xs text-slate-400 mt-auto">

@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\PeopleController;
 use App\Http\Controllers\Web\AdminlandController;
+use App\Http\Controllers\Web\MyStuffController;
 
 // Public auth routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -28,6 +29,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
     Route::post('/projects/{id}/toggle-pin', [ProjectController::class, 'togglePin'])->name('projects.toggle-pin');
+    Route::post('/projects/{id}/color', [ProjectController::class, 'updateColor'])->name('projects.color');
     Route::post('/projects/{id}/archive', [ProjectController::class, 'archive'])->name('projects.archive');
     Route::post('/projects/{id}/unarchive', [ProjectController::class, 'unarchive'])->name('projects.unarchive');
     Route::delete('/projects/{id}', [ProjectController::class, 'destroy'])->name('projects.destroy');
@@ -58,6 +60,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
     Route::post('/people', [PeopleController::class, 'store'])->name('people.store');
     Route::delete('/people/{userId}', [PeopleController::class, 'destroy'])->name('people.destroy');
+
+    // My Stuff & Personal Dock
+    Route::get('/my/tasks', [MyStuffController::class, 'tasks'])->name('my.tasks');
+    Route::get('/my/events', [MyStuffController::class, 'events'])->name('my.events');
+    Route::get('/my/bookmarks', [MyStuffController::class, 'bookmarks'])->name('my.bookmarks');
+    Route::get('/my/activity', [MyStuffController::class, 'activity'])->name('my.activity');
+    Route::get('/my/notes', [MyStuffController::class, 'notes'])->name('my.notes');
+    Route::post('/my/notes', [MyStuffController::class, 'saveNotes'])->name('my.notes.save');
+    Route::get('/support', [MyStuffController::class, 'support'])->name('my.support');
 
     // Adminland & Basecamp Import/Export
     Route::get('/adminland', [AdminlandController::class, 'index'])->name('adminland.index');
