@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'Sign In') - Ajath PMT</title>
+    <title>@yield('title', 'Sign In') - Ajath Workspace</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,14 +14,12 @@
     <div class="w-full max-w-md space-y-6">
         <!-- Logo -->
         <div class="text-center space-y-2">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 flex items-center justify-center text-white mx-auto shadow-xl shadow-amber-500/20">
-                <i data-lucide="layers" class="w-8 h-8"></i>
-            </div>
+            <img src="{{ asset('images/logo.png') }}" alt="Ajath Workspace" class="w-16 h-16 object-contain mx-auto drop-shadow-lg">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Ajath <span class="text-amber-400">PMT</span>
+                Ajath <span class="text-emerald-400">Workspace</span>
             </h1>
             <p class="text-sm text-slate-400">
-                Basecamp-style Team Collaboration & Project Platform
+                Modern Team Collaboration & Project Management
             </p>
         </div>
 

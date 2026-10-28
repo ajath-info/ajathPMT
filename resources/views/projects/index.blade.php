@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'All Projects - Basecamp')
+@section('title', 'All Projects - Ajath Workspace')
 
 @section('content')
 <div x-data="{ 

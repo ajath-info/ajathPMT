@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Basecamp')
+@section('title', 'Ajath Workspace')
 
 @section('content')
 <div x-data="{ 
@@ -79,10 +79,15 @@
             <div x-show="!editingLogo" class="relative group inline-flex items-center justify-center">
                 <!-- Image Logo View -->
                 <div x-show="displayMode === 'logo'" class="flex items-center justify-center">
-                    <img :src="logoUrl" 
+                    @php
+                        $activeLogo = ($currentOrg->logo_url && $currentOrg->logo_url !== 'text_only') ? $currentOrg->logo_url : asset('images/logo.png');
+                    @endphp
+                    <img src="{{ $activeLogo }}" 
+                         :src="logoUrl" 
                          alt="{{ $currentOrg->name }}" 
                          class="h-20 sm:h-24 w-auto max-w-[260px] object-contain select-none cursor-pointer transition-transform group-hover:scale-[1.01]" 
-                         @click="editingLogo = true">
+                         @click="editingLogo = true"
+                         onerror="this.onerror=null; this.src='{{ asset('images/logo.png') }}';">
                 </div>
 
                 <!-- Company Name Text View (when 'Just display our company name' selected) -->

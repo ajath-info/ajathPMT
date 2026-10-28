@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Basecamp') - Ajath PMT</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg viewBox='0 0 32 32' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='16' cy='16' r='16' fill='%23199849'/%3E%3Cpath d='M8 22l8-12 8 12H8z' fill='%23fff'/%3E%3C/svg%3E">
+    <title>@yield('title', 'Ajath Workspace')</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/logo.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/logo.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -73,16 +76,12 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                     @endif
                 </div>
 
-                <!-- Center: The Basecamp Mountain Logo & Dropdown -->
+                <!-- Center: Ajath Workspace Logo & Switcher Dropdown -->
                 <div class="relative flex items-center justify-center">
-                    <button @click="navDropdown = !navDropdown" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-slate-200/60 transition-colors group">
-                        <!-- Basecamp Mountain Icon (Green Circle with white peak) -->
-                        <div class="w-5 h-5 rounded-full bg-[#199849] flex items-center justify-center text-white shadow-sm flex-shrink-0">
-                            <svg viewBox="0 0 24 24" class="w-3 h-3 fill-white" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 4L3 18h18L12 4zm0 4.5l5.2 8H6.8L12 8.5z"/>
-                            </svg>
-                        </div>
-                        <span class="font-black text-sm tracking-tight text-slate-800 group-hover:text-black">Basecamp</span>
+                    <button @click="navDropdown = !navDropdown" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full hover:bg-slate-200/60 transition-colors group">
+                        <!-- Ajath Workspace Logo Icon -->
+                        <img src="{{ asset('images/logo.png') }}" class="w-5 h-5 object-contain flex-shrink-0" alt="Ajath">
+                        <span class="font-black text-sm tracking-tight text-slate-800 group-hover:text-black">Ajath Workspace</span>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-800 transition-transform" :class="navDropdown ? 'rotate-180' : ''"></i>
                     </button>
 
@@ -171,7 +170,7 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
     <!-- Footer -->
     <footer class="py-6 text-center text-xs text-slate-400 mt-auto">
         <div class="max-w-7xl mx-auto px-4">
-            <p>Ajath Basecamp • Connected to <a href="https://workspace.ajath.com" class="text-slate-600 hover:underline font-semibold">workspace.ajath.com</a></p>
+            <p>Ajath Workspace • Connected to <a href="https://workspace.ajath.com" class="text-slate-600 hover:underline font-semibold">workspace.ajath.com</a></p>
         </div>
     </footer>
 
