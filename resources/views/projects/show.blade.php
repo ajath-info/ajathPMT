@@ -22,7 +22,7 @@
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                     <span>{{ $project->name }}</span>
-                    @if($project->members->contains(fn($m) => $m->pivot->role === 'PROJECT_CLIENT'))
+                    @if($project->members->contains(fn($m) => ($m->pivot?->role ?? '') === 'PROJECT_CLIENT'))
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
                         Client Accessible
                     </span>
@@ -37,7 +37,7 @@
             <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-100 self-stretch sm:self-auto justify-between sm:justify-start">
                 <div class="flex items-center -space-x-2">
                     @foreach($project->members as $m)
-                    <img src="{{ $m->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($m->name) }}" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" title="{{ $m->name }} ({{ $m->pivot->role }})">
+                    <img src="{{ $m->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($m->name) }}" class="w-8 h-8 rounded-full border-2 border-white object-cover shadow-sm" title="{{ $m->name }} ({{ $m->pivot?->role ?? 'MEMBER' }})">
                     @endforeach
                 </div>
                 <span class="text-xs font-bold text-slate-700 pr-2">{{ $project->members->count() }} on project</span>

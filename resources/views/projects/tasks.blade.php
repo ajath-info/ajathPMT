@@ -48,7 +48,7 @@
                     <select name="assigned_to" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         <option value="">Unassigned</option>
                         @foreach($project->members as $m)
-                        <option value="{{ $m->id }}">{{ $m->name }} ({{ $m->pivot->role }})</option>
+                        <option value="{{ $m->id }}">{{ $m->name }} ({{ $m->pivot?->role ?? 'MEMBER' }})</option>
                         @endforeach
                     </select>
                 </div>

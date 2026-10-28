@@ -154,6 +154,12 @@ class DashboardController extends Controller
             $filename = 'logo_' . $org->id . '_' . time() . '.' . $file->getClientOriginalExtension();
             $file->move($uploadDir, $filename);
 
+            $rootUploadDir = base_path('uploads/logos');
+            if (!is_dir($rootUploadDir)) {
+                mkdir($rootUploadDir, 0777, true);
+            }
+            @copy($uploadDir . '/' . $filename, $rootUploadDir . '/' . $filename);
+
             $org->logo_url = '/uploads/logos/' . $filename;
             $org->save();
 
