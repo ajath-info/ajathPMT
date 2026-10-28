@@ -51,18 +51,51 @@
     </div>
 
     <!-- Profile Edit Form Card -->
-    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
-            <img src="{{ $user->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($user->name) }}" 
-                 class="w-16 h-16 rounded-full border-2 border-emerald-500 object-cover shadow-sm">
-            <div>
-                <h3 class="text-sm font-black text-slate-900">Personal Information</h3>
-                <p class="text-xs text-slate-500">Your profile details are visible to your team and clients on projects.</p>
-            </div>
-        </div>
-
-        <form action="{{ route('my.profile.update') }}" method="POST" class="space-y-4">
+    <div x-data="{
+            avatarPreview: '{{ $user->avatar_url ?: "https://api.dicebear.com/7.x/initials/svg?seed=" . urlencode($user->name) }}',
+            previewFile(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.avatarPreview = URL.createObjectURL(file);
+                }
+            }
+         }"
+         class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
+        
+        <form action="{{ route('my.profile.update') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
+
+            <!-- Basecamp Profile Avatar Upload Area -->
+            <div class="flex flex-col sm:flex-row items-center gap-6 p-4 bg-slate-50/80 rounded-2xl border border-slate-200/80">
+                <div class="relative group cursor-pointer" @click="$refs.avatarInput.click()" title="Click to choose a photo">
+                    <img :src="avatarPreview" 
+                         class="w-20 h-20 rounded-full border-2 border-emerald-500 object-cover shadow-sm group-hover:opacity-85 transition-all">
+                    <div class="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i data-lucide="camera" class="w-5 h-5 mb-0.5"></i>
+                        <span class="text-[9px] font-bold">Change</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 text-center sm:text-left flex-1">
+                    <h3 class="text-sm font-black text-slate-900">Profile Photo</h3>
+                    <p class="text-xs text-slate-500">Upload a picture from your device (PNG, JPG, JPEG, GIF, or WEBP up to 5MB).</p>
+                    
+                    <div class="flex items-center gap-2 justify-center sm:justify-start pt-1">
+                        <button type="button" 
+                                @click="$refs.avatarInput.click()" 
+                                class="px-3.5 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer">
+                            <i data-lucide="upload" class="w-3.5 h-3.5 text-slate-500"></i>
+                            <span>Upload photo...</span>
+                        </button>
+                        <input x-ref="avatarInput" 
+                               type="file" 
+                               name="avatar" 
+                               accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" 
+                               class="hidden" 
+                               @change="previewFile($event)">
+                    </div>
+                </div>
+            </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -93,18 +126,12 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">Avatar Image URL</label>
-                <input type="url" name="avatar_url" value="{{ old('avatar_url', $user->avatar_url) }}" placeholder="https://..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">
-                <span class="text-[10px] text-slate-400 mt-0.5 block">Paste a public image URL or leave empty for automatic initials emblem.</span>
-            </div>
-
-            <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Bio / What I Work On</label>
                 <textarea name="bio" rows="3" placeholder="Tell your teammates what you specialize in..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all">{{ old('bio', $user->bio) }}</textarea>
             </div>
 
             <div class="flex items-center justify-end pt-3 border-t border-slate-100">
-                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-2xs transition-all">
+                <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-2xs transition-all cursor-pointer">
                     Save Profile Changes
                 </button>
             </div>

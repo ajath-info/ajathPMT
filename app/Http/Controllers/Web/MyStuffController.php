@@ -59,12 +59,40 @@ class MyStuffController extends Controller
             'job_title' => 'nullable|string|max:255',
             'bio' => 'nullable|string|max:1000',
             'timezone' => 'nullable|string|max:100',
-            'avatar_url' => 'nullable|string|max:500',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,svg|max:5120',
         ]);
 
-        $user->update($validated);
+        $userData = [
+            'name' => $validated['name'],
+            'job_title' => $validated['job_title'] ?? null,
+            'bio' => $validated['bio'] ?? null,
+            'timezone' => $validated['timezone'] ?? $user->timezone,
+        ];
 
-        return back()->with('success', 'Profile updated successfully.');
+        // Handle Avatar File Upload
+        if ($request->hasFile('avatar')) {
+            $file = $request->file('avatar');
+            $uploadDir = public_path('uploads/avatars');
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+
+            $filename = 'avatar_' . $user->id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $file->move($uploadDir, $filename);
+
+            // Also copy to root uploads for shared hosting compatibility
+            $rootUploadDir = base_path('uploads/avatars');
+            if (!is_dir($rootUploadDir)) {
+                mkdir($rootUploadDir, 0777, true);
+            }
+            @copy($uploadDir . '/' . $filename, $rootUploadDir . '/' . $filename);
+
+            $userData['avatar_url'] = '/uploads/avatars/' . $filename;
+        }
+
+        $user->update($userData);
+
+        return back()->with('success', 'Profile photo and information updated successfully.');
     }
 
     public function drafts(Request $request)
