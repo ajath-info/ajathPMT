@@ -33,6 +33,7 @@ class DashboardController extends Controller
 
         session([
             'active_org_id' => $currentOrg->id,
+            'active_org_name' => $currentOrg->name,
             'user_role' => $userRole,
         ]);
 
@@ -47,7 +48,7 @@ class DashboardController extends Controller
             });
         }
 
-        $projects = $projectQuery->latest()->get();
+        $projects = $projectQuery->orderByDesc('is_pinned')->latest()->get();
 
         // Calculate project progress
         foreach ($projects as $proj) {

@@ -79,6 +79,8 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'client_subtitle' => 'nullable|string|max:255',
+            'color_theme' => 'nullable|string|max:50',
             'cover_url' => 'nullable|string',
             'visibility' => 'nullable|in:ORGANIZATION,PRIVATE',
             'member_ids' => 'nullable|array',
@@ -92,6 +94,9 @@ class ProjectController extends Controller
             'name' => $validated['name'],
             'slug' => $slug,
             'description' => $validated['description'] ?? null,
+            'client_subtitle' => $validated['client_subtitle'] ?? null,
+            'color_theme' => $validated['color_theme'] ?? 'white',
+            'is_pinned' => false,
             'cover_url' => $validated['cover_url'] ?? 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800',
             'status' => 'ACTIVE',
             'visibility' => $validated['visibility'] ?? 'ORGANIZATION',
@@ -128,6 +133,22 @@ class ProjectController extends Controller
         }
 
         return redirect()->route('projects.show', $project->id)->with('success', 'Project created successfully!');
+    }
+
+    public function togglePin($id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $project->is_pinned = !$project->is_pinned;
+        $project->save();
+
+        if (request()->wantsJson()) {
+            return response()->json(['is_pinned' => $project->is_pinned]);
+        }
+
+        return back();
     }
 
     public function show($id)

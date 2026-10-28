@@ -19,6 +19,14 @@ class Project extends Model
         'visibility',
         'start_date',
         'created_by',
+        'color_theme',
+        'is_pinned',
+        'client_subtitle',
+        'badge_text',
+    ];
+
+    protected $casts = [
+        'is_pinned' => 'boolean',
     ];
 
     public function organization()

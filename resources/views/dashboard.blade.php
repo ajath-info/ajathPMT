@@ -1,211 +1,401 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard')
+@section('title', 'Basecamp')
 
 @section('content')
-<div class="space-y-8">
+<div x-data="{ 
+    createModal: false, 
+    inviteModal: false,
+    folderModal: false,
+    selectedColor: 'white',
+    inviteRole: 'MEMBER',
+    toggleStar(projId, el) {
+        fetch('/projects/' + projId + '/toggle-pin', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        }).then(r => r.json()).then(data => {
+            el.dataset.pinned = data.is_pinned;
+        }).catch(() => {
+            window.location.reload();
+        });
+    }
+}" class="space-y-8">
 
-    <!-- Company Welcome Banner -->
-    <div class="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
-        <div class="space-y-2 max-w-2xl relative z-10">
-            <div class="flex items-center gap-2">
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                    <i data-lucide="building" class="w-3.5 h-3.5 text-amber-500"></i>
-                    <span>{{ $currentOrg->name }}</span>
-                </span>
-                @if($memberships->count() > 1)
-                <div x-data="{ open: false }" class="relative inline-block text-left">
-                    <button @click="open = !open" class="text-xs text-slate-500 hover:text-slate-800 underline font-medium">Switch Company</button>
-                    <div x-show="open" @click.away="open = false" x-cloak class="absolute left-0 mt-2 w-56 rounded-2xl bg-white shadow-xl border border-slate-100 py-2 z-50">
-                        @foreach($memberships as $m)
-                            <a href="{{ route('switch-org', $m->organization_id) }}" class="block px-4 py-2 text-xs font-semibold {{ $m->organization_id == $currentOrg->id ? 'bg-amber-50 text-amber-800' : 'text-slate-700 hover:bg-slate-50' }}">
-                                {{ $m->organization->name }} ({{ $m->role }})
-                            </a>
-                        @endforeach
-                    </div>
-                </div>
-                @endif
-            </div>
-
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                Welcome back, {{ $user->name }}!
-            </h1>
-            <p class="text-sm text-slate-500 leading-relaxed">
-                {{ $currentOrg->description ?: 'Everything your company is working on in one unified, Basecamp-style space.' }}
-            </p>
+    <!-- Top Hero Section: "Ai" Gradient Emblem & Action Bar -->
+    <div class="flex flex-col items-center justify-center pt-2 pb-4 space-y-4">
+        
+        <!-- Ai Fluid Ribbon Monogram Logo (matching screenshot) -->
+        <div class="relative w-28 h-20 flex items-center justify-center">
+            <svg viewBox="0 0 160 120" class="w-full h-full drop-shadow-md">
+                <defs>
+                    <linearGradient id="aiGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#ec4899" />
+                        <stop offset="50%" stop-color="#a855f7" />
+                        <stop offset="100%" stop-color="#6366f1" />
+                    </linearGradient>
+                    <linearGradient id="aiGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#6366f1" />
+                        <stop offset="100%" stop-color="#3b82f6" />
+                    </linearGradient>
+                </defs>
+                <!-- Stylized "A" loop -->
+                <path d="M 35,95 C 20,80 20,40 50,25 C 80,10 90,55 60,85 C 45,100 25,95 25,80 C 25,65 45,55 75,55" 
+                      fill="none" stroke="url(#aiGradient1)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+                <!-- Stylized "i" stem & dot -->
+                <path d="M 125,50 L 125,95" 
+                      fill="none" stroke="url(#aiGradient2)" stroke-width="18" stroke-linecap="round" />
+                <circle cx="125" cy="22" r="10" fill="#6366f1" />
+            </svg>
         </div>
 
-        <div class="flex items-center gap-3 relative z-10 w-full sm:w-auto">
+        <!-- Search / Jump keyboard prompt -->
+        <div class="text-xs text-slate-500 font-medium flex items-center gap-1.5 cursor-pointer hover:text-slate-800 transition-colors" @click="searchModal = true">
+            <span>Press</span>
+            <kbd class="px-1.5 py-0.5 text-[10px] font-bold font-mono bg-white text-slate-700 border border-slate-300 rounded shadow-2xs">SHIFT</kbd>
+            <kbd class="px-1.5 py-0.5 text-[10px] font-bold font-mono bg-white text-slate-700 border border-slate-300 rounded shadow-2xs">J</kbd>
+            <span>anytime to search or jump</span>
+        </div>
+
+        <!-- Basecamp Action Pill Buttons Bar -->
+        <div class="flex items-center gap-2 flex-wrap justify-center pt-1">
             @if(in_array($userRole, ['OWNER', 'ADMIN', 'MEMBER']))
-            <a href="{{ route('projects.create') }}" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-600 hover:to-rose-700 text-white font-bold text-sm shadow-lg shadow-amber-500/20 transition-all">
-                <i data-lucide="folder-plus" class="w-4 h-4"></i>
-                <span>Make a new project</span>
+            <button @click="createModal = true" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-blue-600"></i>
+                <span>New project</span>
+            </button>
+            @endif
+
+            <button @click="folderModal = true" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
+                <i data-lucide="folder" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Add a folder</span>
+            </button>
+
+            @if(in_array($userRole, ['OWNER', 'ADMIN']))
+            <button @click="inviteModal = true" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Invite people</span>
+            </button>
+
+            <a href="{{ route('people.index') }}" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
+                <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span>Adminland</span>
             </a>
             @endif
 
-            @if(in_array($userRole, ['OWNER', 'ADMIN']))
-            <a href="{{ route('people.index') }}" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm transition-colors">
-                <i data-lucide="user-plus" class="w-4 h-4"></i>
-                <span>Add People</span>
-            </a>
-            @endif
+            <!-- Theme / Droplet Icon -->
+            <button @click="createModal = true" class="p-1.5 bg-white hover:bg-slate-50 text-slate-500 hover:text-slate-800 rounded-full border border-slate-300 shadow-2xs transition-all" title="Customize">
+                <i data-lucide="droplet" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- The 4-Column Basecamp Project Cards Grid -->
+    <div class="max-w-[1360px] mx-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            
+            @forelse($projects as $proj)
+            @php
+                $color = $proj->color_theme ?? 'white';
+                $cardStyles = [
+                    'yellow' => 'bg-[#fefce8] border-amber-300 hover:border-amber-400',
+                    'amber'  => 'bg-[#fffbeb] border-amber-200 border-t-4 border-t-orange-400 hover:border-orange-300',
+                    'peach'  => 'bg-[#fff7ed] border-orange-200 border-t-4 border-t-orange-400 hover:border-orange-300',
+                    'rose'   => 'bg-[#fdf2f8] border-pink-200 border-t-4 border-t-pink-400 hover:border-pink-300',
+                    'purple' => 'bg-[#f5f3ff] border-purple-200 border-t-4 border-t-purple-400 hover:border-purple-300',
+                    'sky'    => 'bg-[#f0f9ff] border-sky-300 hover:border-sky-400',
+                    'mint'   => 'bg-[#f0fdf4] border-emerald-200 border-t-4 border-t-emerald-500 hover:border-emerald-300',
+                    'slate'  => 'bg-[#f8fafc] border-slate-200 hover:border-slate-300',
+                    'white'  => 'bg-white border-slate-200 hover:border-slate-300',
+                ][$color] ?? 'bg-white border-slate-200 hover:border-slate-300';
+
+                $avatarColors = [
+                    'SN' => 'bg-purple-600',
+                    'PK' => 'bg-teal-500',
+                    'DT' => 'bg-emerald-600',
+                    'RO' => 'bg-blue-600',
+                    'GK' => 'bg-fuchsia-600',
+                    'E'  => 'bg-orange-500',
+                    'PI' => 'bg-pink-500',
+                    'AI' => 'bg-emerald-700',
+                    'RS' => 'bg-rose-500',
+                    'RK' => 'bg-indigo-600',
+                    'AY' => 'bg-violet-600',
+                    'IY' => 'bg-cyan-600',
+                ];
+            @endphp
+
+            <div class="relative rounded-2xl {{ $cardStyles }} p-4 h-[160px] flex flex-col justify-between transition-all basecamp-card-shadow group">
+                
+                <!-- Card Header: Title, Subtitle, Star -->
+                <div>
+                    <div class="flex items-start justify-between gap-2">
+                        <a href="{{ route('projects.show', $proj->id) }}" class="font-bold text-sm text-slate-900 hover:text-emerald-700 transition-colors line-clamp-2 leading-snug flex-1">
+                            {{ $proj->name }}
+                        </a>
+
+                        <!-- Star / Pin Toggle -->
+                        <button type="button" 
+                                @click="toggleStar({{ $proj->id }}, $el)" 
+                                :data-pinned="{{ $proj->is_pinned ? 'true' : 'false' }}"
+                                class="text-slate-300 hover:text-amber-400 flex-shrink-0 transition-colors pt-0.5" 
+                                title="Star this project">
+                            <i data-lucide="star" class="w-4 h-4" :class="$el.dataset.pinned === 'true' ? 'text-amber-400 fill-amber-400' : 'text-slate-300'"></i>
+                        </button>
+                    </div>
+
+                    <!-- Client Subtitle -->
+                    <p class="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-tight">
+                        {{ $proj->client_subtitle ?: ($proj->description ?: 'Active project') }}
+                    </p>
+
+                    <!-- Badge (e.g. All-access) -->
+                    @if($proj->badge_text)
+                    <span class="inline-block mt-1.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-sky-100 text-sky-700">
+                        {{ $proj->badge_text }}
+                    </span>
+                    @endif
+                </div>
+
+                <!-- Bottom Row: Overlapping Member Avatars & Progress Indicator -->
+                <div class="flex items-center justify-between pt-2">
+                    <div class="flex items-center -space-x-1.5">
+                        @foreach($proj->members->take(6) as $m)
+                        @php
+                            // Extract 2-letter initials
+                            $words = explode(' ', trim($m->name));
+                            $inits = count($words) >= 2 
+                                ? strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1))
+                                : strtoupper(substr($m->name, 0, 2));
+                            if (preg_match('/\(([A-Z]{1,2})\)/', $m->name, $matches)) {
+                                $inits = $matches[1];
+                            }
+                            $bgCol = $avatarColors[$inits] ?? 'bg-slate-600';
+                        @endphp
+                        <span class="w-6 h-6 rounded-full {{ $bgCol }} border-2 border-white text-[9px] font-extrabold flex items-center justify-center text-white shadow-2xs" title="{{ $m->name }}">
+                            {{ $inits }}
+                        </span>
+                        @endforeach
+
+                        @if($proj->members->count() > 6)
+                        <span class="w-6 h-6 rounded-full bg-slate-200 border-2 border-white text-[9px] font-bold flex items-center justify-center text-slate-600 shadow-2xs">
+                            +{{ $proj->members->count() - 6 }}
+                        </span>
+                        @endif
+                    </div>
+
+                    <!-- Little Progress Donut on card (matching screenshot) -->
+                    @if(isset($proj->progress) && $proj->progress > 0)
+                    <div class="w-4 h-4 rounded-full border-2 border-orange-300 border-t-orange-500 animate-spin-none" title="{{ $proj->progress }}% completed"></div>
+                    @endif
+                </div>
+
+            </div>
+            @empty
+            <div class="col-span-full py-16 text-center text-slate-400 space-y-3">
+                <i data-lucide="layers" class="w-12 h-12 mx-auto opacity-40"></i>
+                <p class="text-sm font-semibold">No projects found in this workspace.</p>
+                @if(in_array($userRole, ['OWNER', 'ADMIN']))
+                <button @click="createModal = true" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs">
+                    Create your first project
+                </button>
+                @endif
+            </div>
+            @endforelse
+
+        </div>
+
+        <!-- See all projects bottom pill -->
+        <div class="text-center pt-8">
+            <button class="px-4 py-1.5 bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs transition-colors">
+                See all projects
+            </button>
         </div>
     </div>
 
-    <!-- Main Grid: Projects & Sidebar -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        <!-- Left 2 Cols: Projects -->
-        <div class="lg:col-span-2 space-y-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <h2 class="text-lg font-extrabold text-slate-900">Projects & Workspaces</h2>
-                    <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
-                        {{ $projects->count() }}
-                    </span>
+    <!-- Modal: + New Project -->
+    <div x-show="createModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div @click="createModal = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"></div>
+            
+            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-lg w-full border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h3 class="text-base font-black text-slate-900">Create a New Project</h3>
+                    <button @click="createModal = false" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
                 </div>
-                <span class="text-xs text-slate-400">
-                    {{ $userRole === 'CLIENT' ? 'Only projects you are invited to' : 'Your company workspaces' }}
-                </span>
-            </div>
 
-            @if($projects->isEmpty())
-            <div class="bg-white rounded-3xl p-12 text-center border border-dashed border-slate-300 space-y-4">
-                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto">
-                    <i data-lucide="folder-kanban" class="w-6 h-6"></i>
-                </div>
-                <h3 class="text-base font-bold text-slate-900">No projects yet</h3>
-                <p class="text-xs text-slate-500 max-w-sm mx-auto">
-                    {{ $userRole === 'CLIENT' ? 'You have not been assigned to any client projects yet.' : 'Create your first project to collaborate with your team, assign to-dos, and share docs.' }}
-                </p>
-                @if(in_array($userRole, ['OWNER', 'ADMIN', 'MEMBER']))
-                <a href="{{ route('projects.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs">
-                    <i data-lucide="plus" class="w-4 h-4"></i> Create First Project
-                </a>
-                @endif
-            </div>
-            @else
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                @foreach($projects as $p)
-                <a href="{{ route('projects.show', $p->id) }}" class="group bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all flex flex-col justify-between">
-                    <!-- Cover -->
-                    <div class="h-32 w-full relative overflow-hidden bg-slate-100">
-                        <img src="{{ $p->cover_url ?: 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800' }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Cover">
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
-                        <div class="absolute bottom-3 left-4 right-4 flex items-center justify-between">
-                            <span class="text-xs font-bold text-white truncate drop-shadow-sm">{{ $p->name }}</span>
-                            @if($p->is_client_project)
-                            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-sm">Client Project</span>
-                            @endif
+                <form action="{{ route('projects.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Project Name *</label>
+                        <input type="text" name="name" required placeholder="e.g. Mobile Apps & Admin Console" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Client / Subtitle Label</label>
+                        <input type="text" name="client_subtitle" placeholder="e.g. Client: Seller and Driver Apps" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Description (Optional)</label>
+                        <textarea name="description" rows="2" placeholder="Brief scope of work..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+                    </div>
+
+                    <!-- Basecamp Pastel Color Picker -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Card Color Accent</label>
+                        <div class="grid grid-cols-5 gap-2">
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-white border border-slate-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="white" checked class="text-slate-800">
+                                <span class="text-[10px] font-bold text-slate-600 ml-1">White</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#fefce8] border border-amber-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="yellow" class="text-amber-500">
+                                <span class="text-[10px] font-bold text-amber-700 ml-1">Yellow</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#fff7ed] border border-orange-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="peach" class="text-orange-500">
+                                <span class="text-[10px] font-bold text-orange-700 ml-1">Peach</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#fdf2f8] border border-pink-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="rose" class="text-pink-500">
+                                <span class="text-[10px] font-bold text-pink-700 ml-1">Rose</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#f5f3ff] border border-purple-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="purple" class="text-purple-500">
+                                <span class="text-[10px] font-bold text-purple-700 ml-1">Purple</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#f0f9ff] border border-sky-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="sky" class="text-sky-500">
+                                <span class="text-[10px] font-bold text-sky-700 ml-1">Sky</span>
+                            </label>
+                            <label class="flex items-center justify-center p-2 rounded-xl bg-[#f0fdf4] border border-emerald-300 cursor-pointer">
+                                <input type="radio" name="color_theme" value="mint" class="text-emerald-500">
+                                <span class="text-[10px] font-bold text-emerald-700 ml-1">Mint</span>
+                            </label>
                         </div>
                     </div>
 
-                    <!-- Details -->
-                    <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
-                        <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                            {{ $p->description ?: 'No description provided.' }}
-                        </p>
-
-                        <!-- Progress Bar -->
-                        <div class="space-y-1.5">
-                            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                                <span>Progress</span>
-                                <span class="text-slate-800 font-bold">{{ $p->progress }}%</span>
-                            </div>
-                            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                <div class="h-full bg-gradient-to-r from-amber-500 to-emerald-500 rounded-full transition-all" style="width: {{ $p->progress }}%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Footer: Members & Tools preview -->
-                        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
-                            <div class="flex items-center -space-x-2">
-                                @foreach($p->members->take(4) as $m)
-                                <img src="{{ $m->avatar_url ?: 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($m->name) }}" class="w-6 h-6 rounded-full border-2 border-white object-cover" title="{{ $m->name }} ({{ $m->pivot->role }})">
-                                @endforeach
-                                @if($p->members->count() > 4)
-                                <div class="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[9px] font-bold text-slate-600">
-                                    +{{ $p->members->count() - 4 }}
-                                </div>
-                                @endif
-                            </div>
-
-                            <div class="flex items-center gap-3 text-xs text-slate-400">
-                                <span class="flex items-center gap-1" title="To-dos">
-                                    <i data-lucide="check-square" class="w-3.5 h-3.5"></i> {{ $p->tasks_count }}
-                                </span>
-                                <span class="flex items-center gap-1" title="Discussions">
-                                    <i data-lucide="message-square" class="w-3.5 h-3.5"></i> {{ $p->discussions_count }}
-                                </span>
-                            </div>
-                        </div>
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" @click="createModal = false" class="px-4 py-2 text-xs font-bold text-slate-600">Cancel</button>
+                        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors">
+                            Create project
+                        </button>
                     </div>
-                </a>
-                @endforeach
+                </form>
             </div>
-            @endif
         </div>
+    </div>
 
-        <!-- Right Col: Company Directory & My Tasks -->
-        <div class="space-y-6">
-
-            <!-- Company People Card -->
-            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                        <i data-lucide="users" class="w-4 h-4 text-amber-500"></i>
-                        <span>People in {{ $currentOrg->name }}</span>
-                    </h3>
-                    <a href="{{ route('people.index') }}" class="text-xs font-bold text-amber-600 hover:underline">View All</a>
+    <!-- Modal: Invite People / Client -->
+    <div x-show="inviteModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div @click="inviteModal = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"></div>
+            
+            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-lg w-full border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <h3 class="text-base font-black text-slate-900">Add Team Member or Client</h3>
+                    <button @click="inviteModal = false" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3 pt-2">
-                    <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-bold uppercase text-slate-400">Employees</p>
-                        <p class="text-2xl font-black text-slate-800 mt-0.5">{{ $totalMembers }}</p>
+                <form action="{{ route('people.store') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                        <button type="button" @click="inviteRole = 'MEMBER'" :class="inviteRole !== 'CLIENT' ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-600 font-semibold'" class="py-2 rounded-lg text-xs transition-all">
+                            Team Member
+                        </button>
+                        <button type="button" @click="inviteRole = 'CLIENT'" :class="inviteRole === 'CLIENT' ? 'bg-white shadow text-slate-900 font-bold' : 'text-slate-600 font-semibold'" class="py-2 rounded-lg text-xs transition-all">
+                            Client Partner
+                        </button>
                     </div>
-                    <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p class="text-[10px] font-bold uppercase text-slate-400">Clients</p>
-                        <p class="text-2xl font-black text-slate-800 mt-0.5">{{ $totalClients }}</p>
-                    </div>
-                </div>
 
-                @if(in_array($userRole, ['OWNER', 'ADMIN']))
-                <a href="{{ route('people.index') }}" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors">
-                    <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
-                    <span>Enroll Employee / Client</span>
-                </a>
-                @endif
-            </div>
-
-            <!-- My Assigned To-dos -->
-            <div class="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
-                    <span>My Assigned To-dos</span>
-                </h3>
-
-                @if($myTasks->isEmpty())
-                <p class="text-xs text-slate-400 py-3 text-center">You have no pending tasks. Great job!</p>
-                @else
-                <div class="space-y-2.5">
-                    @foreach($myTasks as $task)
-                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold text-amber-600 truncate max-w-[140px]">{{ $task->project->name }}</span>
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 uppercase">{{ $task->priority }}</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>
+                            <input type="text" name="name" required placeholder="e.g. Deepak Tiwari" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         </div>
-                        <p class="text-xs font-semibold text-slate-800">{{ $task->title }}</p>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Email (Login) *</label>
+                            <input type="email" name="email" required placeholder="deepak@company.com" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Password *</label>
+                            <input type="password" name="password" required placeholder="Initial password" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+
+                        <div x-show="inviteRole !== 'CLIENT'">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Role</label>
+                            <select name="role" :disabled="inviteRole === 'CLIENT'" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
+                                <option value="MEMBER">Member (Assigned Projects)</option>
+                                <option value="ADMIN">Admin (All Projects)</option>
+                            </select>
+                        </div>
+
+                        <template x-if="inviteRole === 'CLIENT'">
+                            <input type="hidden" name="role" value="CLIENT">
+                        </template>
+
+                        <div x-show="inviteRole === 'CLIENT'" class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Client Company *</label>
+                            <input type="text" name="client_company" placeholder="e.g. NDC Homes" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
+                        </div>
                     </div>
-                    @endforeach
-                </div>
-                @endif
+
+                    <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                        <label class="block text-xs font-bold text-slate-700">Assign to Projects</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
+                            @foreach($projects as $p)
+                            <label class="flex items-center gap-2 p-1.5 rounded-lg bg-white border border-slate-100 text-xs font-semibold cursor-pointer">
+                                <input type="checkbox" name="project_ids[]" value="{{ $p->id }}" class="rounded text-emerald-600">
+                                <span class="truncate">{{ $p->name }}</span>
+                            </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                        <button type="button" @click="inviteModal = false" class="px-4 py-2 text-xs font-bold text-slate-600">Cancel</button>
+                        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors">
+                            Send Login Access
+                        </button>
+                    </div>
+                </form>
             </div>
-
         </div>
+    </div>
 
+    <!-- Modal: Add a Folder -->
+    <div x-show="folderModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
+            <div @click="folderModal = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"></div>
+            
+            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-sm w-full border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h3 class="text-sm font-black text-slate-900">Add a Project Folder</h3>
+                    <button @click="folderModal = false" class="text-slate-400 hover:text-slate-600">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500">Group related client and internal projects into categorized folders.</p>
+                <div>
+                    <input type="text" placeholder="e.g. 2026 Client Deliverables" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button @click="folderModal = false" class="px-3 py-1.5 text-xs font-bold text-slate-600">Cancel</button>
+                    <button @click="folderModal = false" class="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded-xl text-xs">Save Folder</button>
+                </div>
+            </div>
+        </div>
     </div>
 
 </div>
 @endsection
-

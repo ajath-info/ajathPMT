@@ -24,6 +24,7 @@ Route::middleware(['auth'])->group(function () {
     // Projects
     Route::get('/projects/create', [ProjectController::class, 'create'])->name('projects.create');
     Route::post('/projects', [ProjectController::class, 'store'])->name('projects.store');
+    Route::post('/projects/{id}/toggle-pin', [ProjectController::class, 'togglePin'])->name('projects.toggle-pin');
     Route::get('/projects/{id}', [ProjectController::class, 'show'])->name('projects.show');
 
     // Project Tools
