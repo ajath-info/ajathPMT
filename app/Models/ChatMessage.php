@@ -33,6 +33,11 @@ class ChatMessage extends Model
         return $this->belongsTo(User::class, 'sender_id');
     }
 
+    public function user()
+    {
+        return $this->sender();
+    }
+
     public function recipient()
     {
         return $this->belongsTo(User::class, 'recipient_id');

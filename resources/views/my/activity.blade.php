@@ -56,9 +56,9 @@
                             {{ strtoupper(substr($chat->user->name ?? 'U', 0, 2)) }}
                         </span>
                         <div>
-                            <span class="font-bold text-slate-800">{{ $chat->user->name ?? 'User' }}</span>
+                            <span class="font-bold text-slate-800">{{ $chat->user->name ?? ($chat->sender->name ?? 'User') }}</span>
                             <span class="text-slate-400 text-[10px] ml-1">in {{ $chat->project->name ?? 'Campfire' }}</span>
-                            <p class="text-slate-600 mt-0.5">{{ $chat->message }}</p>
+                            <p class="text-slate-600 mt-0.5">{{ $chat->content }}</p>
                         </div>
                     </div>
                     <span class="text-[10px] text-slate-400 flex-shrink-0">{{ $chat->created_at->diffForHumans() }}</span>
@@ -71,3 +71,4 @@
     </div>
 </div>
 @endsection
+

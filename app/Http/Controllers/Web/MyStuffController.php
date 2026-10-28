@@ -123,3 +123,4 @@ class MyStuffController extends Controller
         return view('my.support', compact('user'));
     }
 }
+
