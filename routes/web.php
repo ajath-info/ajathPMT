@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ProjectController;
 use App\Http\Controllers\Web\PeopleController;
+use App\Http\Controllers\Web\AdminlandController;
 
 // Public auth routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -48,4 +49,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/people', [PeopleController::class, 'index'])->name('people.index');
     Route::post('/people', [PeopleController::class, 'store'])->name('people.store');
     Route::delete('/people/{userId}', [PeopleController::class, 'destroy'])->name('people.destroy');
+
+    // Adminland & Basecamp Import/Export
+    Route::get('/adminland', [AdminlandController::class, 'index'])->name('adminland.index');
+    Route::get('/adminland/import', [AdminlandController::class, 'importView'])->name('adminland.import');
+    Route::post('/adminland/import/zip', [AdminlandController::class, 'importZip'])->name('adminland.import.zip');
+    Route::post('/adminland/import/api', [AdminlandController::class, 'importApi'])->name('adminland.import.api');
+    Route::post('/adminland/export', [AdminlandController::class, 'export'])->name('adminland.export');
 });

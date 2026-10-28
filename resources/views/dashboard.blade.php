@@ -7,6 +7,7 @@
     createModal: false, 
     inviteModal: false,
     folderModal: false,
+    projectFilter: 'active',
     selectedColor: 'white',
     inviteRole: 'MEMBER',
     toggleStar(projId, el) {
@@ -79,9 +80,14 @@
                 <span>Invite people</span>
             </button>
 
-            <a href="{{ route('people.index') }}" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
+            <a href="{{ route('adminland.index') }}" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-full border border-slate-300 shadow-2xs transition-all">
                 <i data-lucide="key" class="w-3.5 h-3.5 text-slate-500"></i>
                 <span>Adminland</span>
+            </a>
+
+            <a href="{{ route('adminland.import') }}" class="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs rounded-full border border-amber-300 shadow-2xs transition-all" title="Import from Basecamp">
+                <i data-lucide="arrow-down-to-dot" class="w-3.5 h-3.5 text-amber-600"></i>
+                <span>Import Basecamp</span>
             </a>
             @endif
 
@@ -94,7 +100,24 @@
     </div>
 
     <!-- The 4-Column Basecamp Project Cards Grid -->
-    <div class="max-w-[1360px] mx-auto">
+    <div class="max-w-[1360px] mx-auto space-y-3">
+        <!-- Live vs Archived Switcher -->
+        <div class="flex items-center justify-between px-1">
+            <div class="flex items-center gap-3 text-xs font-bold">
+                <button @click="projectFilter = 'active'" :class="projectFilter === 'active' ? 'text-slate-900 border-b-2 border-emerald-600 pb-0.5' : 'text-slate-400 hover:text-slate-700'" class="transition-colors flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Live Projects ({{ $projects->where('status', 'ACTIVE')->count() }})</span>
+                </button>
+                <span class="text-slate-300">|</span>
+                <button @click="projectFilter = 'archived'" :class="projectFilter === 'archived' ? 'text-slate-900 border-b-2 border-amber-600 pb-0.5' : 'text-slate-400 hover:text-slate-700'" class="transition-colors flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Archived Projects ({{ $projects->where('status', 'ARCHIVED')->count() }})</span>
+                </button>
+            </div>
+
+            <span class="text-[11px] text-slate-400 font-medium">Sorted by Starred</span>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             
             @forelse($projects as $proj)
@@ -128,7 +151,8 @@
                 ];
             @endphp
 
-            <div class="relative rounded-2xl {{ $cardStyles }} p-4 h-[160px] flex flex-col justify-between transition-all basecamp-card-shadow group">
+            <div x-show="projectFilter === 'all' || (projectFilter === 'active' && '{{ $proj->status }}' === 'ACTIVE') || (projectFilter === 'archived' && '{{ $proj->status }}' === 'ARCHIVED')"
+                 class="relative rounded-2xl {{ $cardStyles }} p-4 h-[160px] flex flex-col justify-between transition-all basecamp-card-shadow group">
                 
                 <!-- Card Header: Title, Subtitle, Star -->
                 <div>
