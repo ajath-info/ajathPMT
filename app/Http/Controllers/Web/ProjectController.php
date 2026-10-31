@@ -612,21 +612,39 @@ class ProjectController extends Controller
         $paginatedActivities = $activityQuery->paginate(8)->withQueryString();
 
         // Badge helper matching Basecamp screenshot
-        $badgeForUser = function ($name, $customAvatar = null, $customInitials = null, $customBg = null) {
+        $knownOfficialEmails = [
+            'edward' => ['edward@ajath.com', 'edward@ndchomes.com'],
+            'gaurav' => ['gaurav@ajath.com'],
+            'pawandeep' => ['pawandeep@ajath.com', 'pawandeep.kaur.khalsa@gmail.com'],
+            'prashant' => ['prashant@ajath.com'],
+            'harshvardhan' => ['harshvardhan@ajath.com'],
+            'rajesh' => ['rajesh@ajath.com'],
+            'rishabh' => ['rishabh@ajath.com'],
+            'shachish' => ['shachish@ajath.com'],
+            'shiv' => ['shiv@ajath.com'],
+            'manjot' => ['manjot@ajath.com'],
+        ];
+        $badgeForUser = function ($name, $customAvatar = null, $customInitials = null, $customBg = null, $email = null, $isPending = false) use ($knownOfficialEmails) {
             $name = trim($name);
             $lower = strtolower($name);
+            $emailLower = $email ? strtolower(trim($email)) : null;
+            $matchesOfficial = function ($key) use ($emailLower, $isPending, $knownOfficialEmails) {
+                if ($isPending) return false;
+                if ($emailLower === null || $emailLower === '') return true;
+                return in_array($emailLower, $knownOfficialEmails[$key] ?? [], true);
+            };
             if ($lower !== 'shachisheh') {
-                if (stripos($name, 'Edward') !== false) return (object)['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'avatar' => '/uploads/avatars/52829137.png', 'isSelf' => false];
-                if (stripos($name, 'Gaurav') !== false) return (object)['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'avatar' => '/uploads/avatars/53122994.png', 'isSelf' => false];
-                if (stripos($name, 'Pawandeep') !== false) return (object)['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/23053551.png', 'isSelf' => false];
-                if (stripos($name, 'Prashant') !== false) return (object)['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'avatar' => '/uploads/avatars/22369742.png', 'isSelf' => false];
-                if (stripos($name, 'Harshvardhan') !== false) return (object)['name' => 'Harshvardhan Singh', 'initials' => 'HS', 'bg' => 'bg-[#c026d3]', 'avatar' => '/uploads/avatars/47630095.png', 'isSelf' => false];
-                if (stripos($name, 'Rajesh') !== false) return (object)['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'avatar' => '/uploads/avatars/35685578.png', 'isSelf' => false];
-                if (stripos($name, 'Rishabh') !== false) return (object)['name' => 'Rishabh Ojha', 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/51410494.png', 'isSelf' => false];
-                if (stripos($name, 'Shachish Sneh') !== false || $lower === 'shachish') return (object)['name' => 'Shachish Sneh', 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'avatar' => '/uploads/avatars/25036340.png', 'isSelf' => false];
-                if (stripos($name, 'Shiv Narayan') !== false) return (object)['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'avatar' => '/uploads/avatars/52873395.png', 'isSelf' => false];
+                if (stripos($name, 'Edward') !== false && $matchesOfficial('edward')) return (object)['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'avatar' => '/uploads/avatars/52829137.png', 'isSelf' => false];
+                if ($lower === 'gaurav khulbey' && $matchesOfficial('gaurav')) return (object)['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'avatar' => '/uploads/avatars/53122994.png', 'isSelf' => false];
+                if ($lower === 'pawandeep kaur' && $matchesOfficial('pawandeep')) return (object)['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/23053551.png', 'isSelf' => false];
+                if ($lower === 'prashant' && $matchesOfficial('prashant')) return (object)['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'avatar' => '/uploads/avatars/22369742.png', 'isSelf' => false];
+                if ($lower === 'harshvardhan singh' && $matchesOfficial('harshvardhan')) return (object)['name' => 'Harshvardhan Singh', 'initials' => 'HS', 'bg' => 'bg-[#c026d3]', 'avatar' => '/uploads/avatars/47630095.png', 'isSelf' => false];
+                if ($lower === 'rajesh kumar' && $matchesOfficial('rajesh')) return (object)['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'avatar' => '/uploads/avatars/35685578.png', 'isSelf' => false];
+                if ($lower === 'rishabh ojha' && $matchesOfficial('rishabh')) return (object)['name' => 'Rishabh Ojha', 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/51410494.png', 'isSelf' => false];
+                if ($lower === 'shachish sneh' && $matchesOfficial('shachish')) return (object)['name' => 'Shachish Sneh', 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'avatar' => '/uploads/avatars/25036340.png', 'isSelf' => false];
+                if ($lower === 'shiv narayan' && $matchesOfficial('shiv')) return (object)['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'avatar' => '/uploads/avatars/52873395.png', 'isSelf' => false];
                 if (stripos($name, 'Ajath') !== false) return (object)['name' => 'Ajath Infotech', 'initials' => 'AI', 'bg' => 'bg-[#0d9488]', 'avatar' => null, 'isSelf' => false];
-                if (stripos($name, 'Manjot') !== false) return (object)['name' => 'Manjot Singh', 'initials' => 'M', 'bg' => 'bg-[#1d4ed8]', 'avatar' => '/uploads/avatars/22369668.png', 'isSelf' => true];
+                if ($lower === 'manjot singh' && $matchesOfficial('manjot')) return (object)['name' => 'Manjot Singh', 'initials' => 'M', 'bg' => 'bg-[#1d4ed8]', 'avatar' => '/uploads/avatars/22369668.png', 'isSelf' => true];
             }
             $parts = preg_split('/\s+/', $name);
             $in = $customInitials ?: strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
@@ -634,7 +652,7 @@ class ProjectController extends Controller
                 'name' => $name,
                 'initials' => $in ?: 'TM',
                 'bg' => $customBg ?: 'bg-[#0d9488]',
-                'avatar' => $customAvatar,
+                'avatar' => $isPending ? null : $customAvatar,
                 'isSelf' => false,
             ];
         };
@@ -643,7 +661,14 @@ class ProjectController extends Controller
         $savedPeopleStateForBar = \Illuminate\Support\Facades\Cache::get('bc_project_people_state_' . $project->id);
         if (is_array($savedPeopleStateForBar) && !empty($savedPeopleStateForBar['members']) && is_array($savedPeopleStateForBar['members'])) {
             $projectMemberBadges = collect($savedPeopleStateForBar['members'])
-                ->map(fn($m) => $badgeForUser($m['name'] ?? 'Member', $m['avatar'] ?? null, $m['initials'] ?? null, $m['bg'] ?? null));
+                ->map(fn($m) => $badgeForUser(
+                    $m['name'] ?? 'Member',
+                    $m['avatar'] ?? null,
+                    $m['initials'] ?? null,
+                    $m['bg'] ?? null,
+                    $m['email'] ?? null,
+                    !empty($m['isPending']) || (($m['roleBadge'] ?? '') === 'Pending')
+                ));
         } elseif ($project->id == 4) {
             $projectMemberBadges = collect(['Ajath Infotech', 'Gaurav Khulbey', 'Pawandeep Kaur', 'Rajesh Kumar', 'Shiv Narayan'])
                 ->map(fn($name) => $badgeForUser($name));
@@ -1868,26 +1893,27 @@ class ProjectController extends Controller
         ];
 
         $knownProfiles = [
-            'gaurav' => ['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'roleBadge' => '', 'jobTitle' => 'Cybersecurity Expert', 'avatar' => '/uploads/avatars/53122994.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'manjot' => ['name' => 'Manjot Singh', 'initials' => 'MS', 'bg' => 'bg-[#1d4ed8]', 'roleBadge' => 'Owner', 'jobTitle' => 'Global VP & Partner', 'avatar' => '/uploads/avatars/22369668.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false, 'isSelf' => true],
-            'pawandeep' => ['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'roleBadge' => 'Admin', 'jobTitle' => 'Manager', 'avatar' => '/uploads/avatars/23053551.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'prashant' => ['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'roleBadge' => '', 'jobTitle' => 'Analyst', 'avatar' => '/uploads/avatars/22369742.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'rajesh' => ['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'roleBadge' => 'Admin', 'jobTitle' => 'Project Lead', 'avatar' => '/uploads/avatars/35685578.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'rishabh' => ['name' => 'Rishabh Ojha', 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'roleBadge' => '', 'jobTitle' => 'Web Developer', 'avatar' => '/uploads/avatars/51410494.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'shachish' => ['name' => 'Shachish Sneh', 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'roleBadge' => 'Admin', 'jobTitle' => 'Solution Architect & Technology Master', 'avatar' => '/uploads/avatars/25036340.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'nikhil' => ['name' => 'Nikhil Aneja', 'initials' => 'NA', 'bg' => 'bg-[#0284c7]', 'roleBadge' => '', 'jobTitle' => 'Recruitment Specialist', 'avatar' => '/uploads/avatars/48443395.png', 'company' => 'ITG', 'isClient' => false],
-            'nirdesh' => ['name' => 'Nirdesh Verma', 'initials' => 'NV', 'bg' => 'bg-[#0d9488]', 'roleBadge' => '', 'jobTitle' => 'QA Engineer', 'avatar' => '/uploads/avatars/48060513.png', 'company' => 'Borgfy', 'isClient' => false],
-            'rudra' => ['name' => 'Rudra Banger', 'initials' => 'RB', 'bg' => 'bg-[#92400e]', 'roleBadge' => '', 'jobTitle' => 'Mobile Developer', 'avatar' => null, 'company' => 'Contractor', 'isClient' => false],
-            'harshvardhan' => ['name' => 'Harshvardhan Singh', 'initials' => 'HK', 'bg' => 'bg-[#c026d3]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => '/uploads/avatars/47630095.png', 'company' => 'Orahi', 'isClient' => false],
-            'srijita' => ['name' => 'Srijita Roy', 'initials' => 'SR', 'bg' => 'bg-[#7c3aed]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => null, 'company' => 'Orahi', 'isClient' => false],
-            'shiv' => ['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'roleBadge' => '', 'jobTitle' => 'Full Stack Developer', 'avatar' => '/uploads/avatars/52873395.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'kashish' => ['name' => 'Kashish', 'initials' => 'K', 'bg' => 'bg-[#10b981]', 'roleBadge' => '', 'jobTitle' => 'Software Engineer', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'tanu' => ['name' => 'Tanu Shree', 'initials' => 'TS', 'bg' => 'bg-[#eab308]', 'roleBadge' => '', 'jobTitle' => 'HR Executive', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'anushka' => ['name' => 'Anushka Garg', 'initials' => 'AG', 'bg' => 'bg-[#ea580c]', 'roleBadge' => '', 'jobTitle' => 'Talent Acquisition', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'edward' => ['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at NDC Homes', 'avatar' => '/uploads/avatars/52829137.png', 'company' => 'NDC Homes', 'isClient' => true],
-            'muaad' => ['name' => 'Dr. Muaad Alahmadi', 'initials' => 'DMP', 'bg' => 'bg-[#1e293b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
-            'doug' => ['name' => 'Doug Morneau', 'initials' => 'DMON', 'bg' => 'bg-[#ea580c]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
+            'gaurav' => ['name' => 'Gaurav Khulbey', 'emails' => ['gaurav@ajath.com'], 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'roleBadge' => '', 'jobTitle' => 'Cybersecurity Expert', 'avatar' => '/uploads/avatars/53122994.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'manjot' => ['name' => 'Manjot Singh', 'emails' => ['manjot@ajath.com'], 'initials' => 'MS', 'bg' => 'bg-[#1d4ed8]', 'roleBadge' => 'Owner', 'jobTitle' => 'Global VP & Partner', 'avatar' => '/uploads/avatars/22369668.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'pawandeep' => ['name' => 'Pawandeep Kaur', 'emails' => ['pawandeep@ajath.com', 'pawandeep.kaur.khalsa@gmail.com'], 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'roleBadge' => 'Admin', 'jobTitle' => 'Manager', 'avatar' => '/uploads/avatars/23053551.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'prashant' => ['name' => 'Prashant', 'emails' => ['prashant@ajath.com'], 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'roleBadge' => '', 'jobTitle' => 'Analyst', 'avatar' => '/uploads/avatars/22369742.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'rajesh' => ['name' => 'Rajesh Kumar', 'emails' => ['rajesh@ajath.com'], 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'roleBadge' => 'Admin', 'jobTitle' => 'Project Lead', 'avatar' => '/uploads/avatars/35685578.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'rishabh' => ['name' => 'Rishabh Ojha', 'emails' => ['rishabh@ajath.com'], 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'roleBadge' => '', 'jobTitle' => 'Web Developer', 'avatar' => '/uploads/avatars/51410494.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'shachish' => ['name' => 'Shachish Sneh', 'emails' => ['shachish@ajath.com'], 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'roleBadge' => 'Admin', 'jobTitle' => 'Solution Architect & Technology Master', 'avatar' => '/uploads/avatars/25036340.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'nikhil' => ['name' => 'Nikhil Aneja', 'emails' => ['nikhil@ajath.com'], 'initials' => 'NA', 'bg' => 'bg-[#0284c7]', 'roleBadge' => '', 'jobTitle' => 'Recruitment Specialist', 'avatar' => '/uploads/avatars/48443395.png', 'company' => 'ITG', 'isClient' => false],
+            'nirdesh' => ['name' => 'Nirdesh Verma', 'emails' => ['nirdesh@ajath.com'], 'initials' => 'NV', 'bg' => 'bg-[#0d9488]', 'roleBadge' => '', 'jobTitle' => 'QA Engineer', 'avatar' => '/uploads/avatars/48060513.png', 'company' => 'Borgfy', 'isClient' => false],
+            'rudra' => ['name' => 'Rudra Banger', 'emails' => ['rudra@ajath.com'], 'initials' => 'RB', 'bg' => 'bg-[#92400e]', 'roleBadge' => '', 'jobTitle' => 'Mobile Developer', 'avatar' => null, 'company' => 'Contractor', 'isClient' => false],
+            'harshvardhan' => ['name' => 'Harshvardhan Singh', 'emails' => ['harshvardhan@ajath.com'], 'initials' => 'HK', 'bg' => 'bg-[#c026d3]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => '/uploads/avatars/47630095.png', 'company' => 'Orahi', 'isClient' => false],
+            'srijita' => ['name' => 'Srijita Roy', 'emails' => ['srijita@ajath.com'], 'initials' => 'SR', 'bg' => 'bg-[#7c3aed]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => null, 'company' => 'Orahi', 'isClient' => false],
+            'shiv' => ['name' => 'Shiv Narayan', 'emails' => ['shiv@ajath.com'], 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'roleBadge' => '', 'jobTitle' => 'Full Stack Developer', 'avatar' => '/uploads/avatars/52873395.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'kashish' => ['name' => 'Kashish', 'emails' => ['kashish@ajath.com'], 'initials' => 'K', 'bg' => 'bg-[#10b981]', 'roleBadge' => '', 'jobTitle' => 'Software Engineer', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'tanu' => ['name' => 'Tanu Shree', 'emails' => ['tanu@ajath.com'], 'initials' => 'TS', 'bg' => 'bg-[#eab308]', 'roleBadge' => '', 'jobTitle' => 'HR Executive', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'anushka' => ['name' => 'Anushka Garg', 'emails' => ['anushka@ajath.com'], 'initials' => 'AG', 'bg' => 'bg-[#ea580c]', 'roleBadge' => '', 'jobTitle' => 'Talent Acquisition', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'edward' => ['name' => 'Edward', 'emails' => ['edward@ajath.com', 'edward@ndchomes.com'], 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at NDC Homes', 'avatar' => '/uploads/avatars/52829137.png', 'company' => 'NDC Homes', 'isClient' => true],
+            'muaad' => ['name' => 'Dr. Muaad Alahmadi', 'emails' => ['muaad@ajath.com'], 'initials' => 'DMP', 'bg' => 'bg-[#1e293b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
+            'doug' => ['name' => 'Doug Morneau', 'emails' => ['doug@ajath.com'], 'initials' => 'DMON', 'bg' => 'bg-[#ea580c]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
         ];
+        $knownAvatarPaths = array_values(array_filter(array_column($knownProfiles, 'avatar')));
 
         $platformUsers = [];
         $seenNames = [];
@@ -1899,10 +1925,12 @@ class ProjectController extends Controller
                 continue;
             }
             $lowerName = strtolower($cleanName);
+            $uEmailLower = strtolower(trim($u->email ?? ''));
             $matchedProfile = null;
             foreach ($knownProfiles as $k => $prof) {
                 $profFullLower = strtolower($prof['name']);
-                if ($lowerName === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($lowerName, $k))) {
+                $emailMatches = in_array($uEmailLower, $prof['emails'] ?? [], true);
+                if ($emailMatches && ($lowerName === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($lowerName, $k)))) {
                     $matchedProfile = $prof;
                     break;
                 }
@@ -1914,11 +1942,14 @@ class ProjectController extends Controller
 
             $parts = preg_split('/\s+/', $cleanName);
             $initials = strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+            $isPending = !$matchedProfile && $u->email_verified_at === null;
+            $uAvatar = ($u->avatar_url && !str_contains($u->avatar_url, 'dicebear') && !in_array($u->avatar_url, $knownAvatarPaths, true))
+                ? $u->avatar_url
+                : null;
             $avatar = ($matchedProfile && !empty($matchedProfile['avatar']))
                 ? $matchedProfile['avatar']
-                : (($u->avatar_url && !str_contains($u->avatar_url, 'dicebear')) ? $u->avatar_url : null);
+                : ($isPending ? null : $uAvatar);
             $jobTitle = $matchedProfile['jobTitle'] ?? str_replace(' at Ajath Infotech Pvt Ltd', '', ($u->job_title ?: 'Team Member'));
-            $isPending = !$matchedProfile && $u->email_verified_at === null;
 
             $entry = [
                 'id' => (int) $u->id,
@@ -1932,13 +1963,16 @@ class ProjectController extends Controller
                 'avatar' => $avatar,
                 'company' => $matchedProfile['company'] ?? $dbCompany,
                 'isClient' => $matchedProfile['isClient'] ?? $dbIsClient,
-                'isSelf' => ((int) $u->id === (int) $user->id) || !empty($matchedProfile['isSelf']),
+                'isSelf' => ((int) $u->id === (int) $user->id) || ($uEmailLower !== '' && strcasecmp($uEmailLower, $user->email ?? '') === 0),
                 'notifications' => true,
             ];
 
-            $nameKey = strtolower($entry['name']);
-            if (!isset($seenNames[$nameKey])) {
-                $seenNames[$nameKey] = true;
+            $uniqueKey = $uEmailLower !== '' ? $uEmailLower : strtolower($entry['name']);
+            if (!isset($seenNames[$uniqueKey])) {
+                $seenNames[$uniqueKey] = true;
+                if ($matchedProfile) {
+                    $seenNames['known_' . strtolower($matchedProfile['name'])] = true;
+                }
                 $platformUsers[] = $entry;
             }
         }
@@ -1946,13 +1980,15 @@ class ProjectController extends Controller
         // Ensure all known profiles are present in platformUsers even if not in DB yet
         $nextVirtualId = 9000;
         foreach ($knownProfiles as $k => $prof) {
-            $nameKey = strtolower($prof['name']);
-            if (!isset($seenNames[$nameKey])) {
-                $seenNames[$nameKey] = true;
+            $knownKey = 'known_' . strtolower($prof['name']);
+            $primaryEmail = strtolower($prof['emails'][0] ?? (preg_replace('/[^a-zA-Z0-9]/', '', explode(' ', $prof['name'])[0]) . '@ajath.com'));
+            if (!isset($seenNames[$knownKey]) && !isset($seenNames[$primaryEmail])) {
+                $seenNames[$knownKey] = true;
+                $seenNames[$primaryEmail] = true;
                 $platformUsers[] = [
                     'id' => $nextVirtualId++,
                     'name' => $prof['name'],
-                    'email' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '', explode(' ', $prof['name'])[0])) . '@ajath.com',
+                    'email' => $primaryEmail,
                     'initials' => $prof['initials'],
                     'bg' => $prof['bg'],
                     'roleBadge' => $prof['roleBadge'],
@@ -1960,7 +1996,7 @@ class ProjectController extends Controller
                     'avatar' => $prof['avatar'],
                     'company' => $prof['company'],
                     'isClient' => $prof['isClient'],
-                    'isSelf' => !empty($prof['isSelf']),
+                    'isSelf' => strcasecmp($primaryEmail, $user->email ?? '') === 0,
                     'notifications' => true,
                 ];
             }
@@ -2032,10 +2068,12 @@ class ProjectController extends Controller
 
         foreach ($projectMembers as &$pmItem) {
             $pmLower = strtolower(trim($pmItem['name'] ?? ''));
+            $pmEmailLower = strtolower(trim($pmItem['email'] ?? ''));
             $matchedKnown = false;
             foreach ($knownProfiles as $k => $prof) {
                 $profFullLower = strtolower($prof['name']);
-                if ($pmLower !== '' && ($pmLower === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($pmLower, $k)))) {
+                $emailMatches = ($pmEmailLower === '' || in_array($pmEmailLower, $prof['emails'] ?? [], true));
+                if ($pmLower !== '' && $emailMatches && empty($pmItem['isPending']) && ($pmItem['roleBadge'] ?? '') !== 'Pending' && ($pmLower === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($pmLower, $k)))) {
                     if (!empty($prof['avatar'])) {
                         $pmItem['avatar'] = $prof['avatar'];
                     }
@@ -2049,15 +2087,19 @@ class ProjectController extends Controller
             }
 
             if (!$matchedKnown) {
-                // If an external invite named 'Manjot' previously got Manjot Singh's Owner badge/avatar, reset it
-                if ($pmLower === 'manjot' && ($pmItem['roleBadge'] ?? '') === 'Owner') {
-                    $pmItem['roleBadge'] = 'Pending';
+                // Never show a hardcoded known-profile DP on a user with a different email ID!
+                if (!empty($pmItem['avatar']) && (in_array($pmItem['avatar'], $knownAvatarPaths, true) || str_contains($pmItem['avatar'], 'dicebear'))) {
                     $pmItem['avatar'] = null;
-                    $pmItem['initials'] = 'M';
-                    $pmItem['bg'] = 'bg-[#0d9488]';
-                    $pmItem['jobTitle'] = 'Team Member';
-                    $pmItem['isSelf'] = false;
                 }
+                if (in_array($pmItem['roleBadge'] ?? '', ['Owner', 'Admin'], true)) {
+                    $pmItem['roleBadge'] = 'Pending';
+                    $pmItem['jobTitle'] = 'Team Member';
+                }
+                if (($pmItem['jobTitle'] ?? '') === 'Global VP & Partner' || ($pmItem['jobTitle'] ?? '') === 'Solution Architect & Technology Master') {
+                    $pmItem['jobTitle'] = 'Team Member';
+                }
+                $parts = preg_split('/\s+/', trim($pmItem['name'] ?? 'U'));
+                $pmItem['initials'] = strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
 
                 $dbUser = null;
                 if (!empty($pmItem['email'])) {
@@ -2081,7 +2123,7 @@ class ProjectController extends Controller
                         $pmItem['email'] = $dbUser->email;
                     }
                     $pmItem['isPending'] = true;
-                    if (empty($pmItem['roleBadge']) || !in_array($pmItem['roleBadge'], ['Owner', 'Admin', 'Client'], true)) {
+                    if (empty($pmItem['roleBadge']) || !in_array($pmItem['roleBadge'], ['Client'], true)) {
                         $pmItem['roleBadge'] = !empty($pmItem['isClient']) ? 'Client' : 'Pending';
                     }
                     if (empty($pmItem['company'])) {
@@ -2089,6 +2131,9 @@ class ProjectController extends Controller
                     }
                 }
             }
+
+            $pmItem['isSelf'] = ((int) ($pmItem['id'] ?? 0) === (int) $user->id)
+                || ($pmEmailLower !== '' && strcasecmp($pmEmailLower, $user->email ?? '') === 0);
         }
         unset($pmItem);
 

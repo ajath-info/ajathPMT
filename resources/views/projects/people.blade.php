@@ -522,7 +522,7 @@ html.bc-theme-dark .bc-client-switch-on {
                                               :class="m.bg || 'bg-[#00897b]'"
                                               x-text="m.initials"></span>
                                     </template>
-                                    <div x-show="m.isSelf && oooActive"
+                                    <div x-show="((m.email && m.email.toLowerCase() === 'manjot@ajath.com') || m.id == 1) && oooActive"
                                          class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
                                         <span class="text-[8.5px] font-black text-[#1d1c1b] leading-none tracking-tight">OUT</span>
                                     </div>

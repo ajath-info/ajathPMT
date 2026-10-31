@@ -959,16 +959,37 @@
         docsUrl: '/projects/29/docs'
     },
     openMyProfileModal() {
+        @php
+            $authEmailLower = Auth::check() ? strtolower(trim(Auth::user()->email ?? '')) : '';
+            $authOfficialAvatars = [
+                'manjot@ajath.com' => '/uploads/avatars/22369668.png',
+                'shachish@ajath.com' => '/uploads/avatars/25036340.png',
+                'pawandeep@ajath.com' => '/uploads/avatars/23053551.png',
+                'pawandeep.kaur.khalsa@gmail.com' => '/uploads/avatars/23053551.png',
+                'gaurav@ajath.com' => '/uploads/avatars/53122994.png',
+                'rajesh@ajath.com' => '/uploads/avatars/35685578.png',
+                'prashant@ajath.com' => '/uploads/avatars/22369742.png',
+                'rishabh@ajath.com' => '/uploads/avatars/51410494.png',
+                'shiv@ajath.com' => '/uploads/avatars/52873395.png',
+                'harshvardhan@ajath.com' => '/uploads/avatars/47630095.png',
+            ];
+            $authResolvedAvatar = $authOfficialAvatars[$authEmailLower]
+                ?? ((Auth::check() && Auth::user()->avatar_url && !str_contains(Auth::user()->avatar_url, 'dicebear') && !in_array(Auth::user()->avatar_url, array_values($authOfficialAvatars), true))
+                    ? Auth::user()->avatar_url
+                    : null);
+            $authParts = preg_split('/\s+/', trim(Auth::check() ? (Auth::user()->name ?? 'U') : 'Manjot Singh'));
+            $authInitials = strtoupper(substr($authParts[0] ?? 'U', 0, 1) . (isset($authParts[1]) ? substr($authParts[1], 0, 1) : ''));
+        @endphp
         this.profileUser = {
             id: {{ Auth::id() ?? 1 }},
             isSelf: true,
             name: '{{ addslashes(Auth::user()->name ?? "Manjot Singh") }}',
             firstName: '{{ addslashes(explode(" ", trim(Auth::user()->name ?? "Manjot"))[0]) }}',
-            initials: 'M',
+            initials: '{{ $authInitials }}',
             bg: 'bg-[#1d4ed8]',
-            roleBadge: 'Owner',
-            jobTitle: '{{ addslashes(Auth::user()->job_title ?: "Global VP & Partner at Ajath Infotech Pvt Ltd") }}',
-            avatar: '{{ (Auth::check() && Auth::user()->avatar_url && !str_contains(Auth::user()->avatar_url, "dicebear")) ? Auth::user()->avatar_url : "/uploads/avatars/22369668.png" }}',
+            roleBadge: '{{ $authEmailLower === "manjot@ajath.com" ? "Owner" : "" }}',
+            jobTitle: '{{ addslashes(Auth::user()->job_title ?: "Team Member at Ajath Infotech Pvt Ltd") }}',
+            avatar: {!! $authResolvedAvatar ? "'" . addslashes($authResolvedAvatar) . "'" : 'null' !!},
             docsUrl: '/projects/4/docs'
         };
         this.profileModal = true;
@@ -1411,12 +1432,18 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                         @click="accountMenu = !accountMenu" 
                         class="flex items-center gap-2 group cursor-pointer focus:outline-none" 
                         title="My Account">
-                    <span class="relative w-7 h-7 rounded-full overflow-hidden border border-slate-300 shadow-2xs group-hover:scale-105 transition-transform inline-block">
-                        <img src="{{ (Auth::user()->avatar_url && !str_contains(Auth::user()->avatar_url, 'dicebear')) ? Auth::user()->avatar_url : '/uploads/avatars/22369668.png' }}" 
-                             class="w-full h-full object-cover">
-                        <span x-show="dockOoo" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
-                            <span class="text-[6.5px] font-black text-[#1d1c1b] leading-none tracking-tight">OUT</span>
-                        </span>
+                    <span class="relative w-7 h-7 rounded-full overflow-hidden border border-slate-300 shadow-2xs group-hover:scale-105 transition-transform inline-flex items-center justify-center {{ $authResolvedAvatar ? '' : 'bg-[#0d9488] text-white font-bold text-[11px]' }}">
+                        @if($authResolvedAvatar)
+                            <img src="{{ $authResolvedAvatar }}" 
+                                 class="w-full h-full object-cover">
+                        @else
+                            <span>{{ $authInitials }}</span>
+                        @endif
+                        @if($authEmailLower === 'manjot@ajath.com' || Auth::id() == 1)
+                            <span x-show="dockOoo" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
+                                <span class="text-[6.5px] font-black text-[#1d1c1b] leading-none tracking-tight">OUT</span>
+                            </span>
+                        @endif
                     </span>
                 </button>
 
@@ -2705,9 +2732,15 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
 
                 <!-- Top Centered Avatar & Controls -->
                 <div class="flex flex-col items-center text-center -mt-9">
-                    <img src="{{ (Auth::user()->avatar_url && !str_contains(Auth::user()->avatar_url, 'dicebear')) ? Auth::user()->avatar_url : '/uploads/avatars/22369668.png' }}"
-                         alt="{{ Auth::user()->name }}"
-                         class="w-[104px] h-[104px] rounded-full border-2 border-[#1b6ac9] object-cover shadow-md bg-white">
+                    @if($authResolvedAvatar)
+                        <img src="{{ $authResolvedAvatar }}"
+                             alt="{{ Auth::user()->name }}"
+                             class="w-[104px] h-[104px] rounded-full border-2 border-[#1b6ac9] object-cover shadow-md bg-white">
+                    @else
+                        <div class="w-[104px] h-[104px] rounded-full border-2 border-[#1b6ac9] bg-[#0d9488] text-white font-bold text-[36px] flex items-center justify-center shadow-md select-none">
+                            {{ $authInitials }}
+                        </div>
+                    @endif
 
                     <label class="mt-2.5 px-3 py-1 rounded-[6px] border border-[#d6d2c9] bg-white hover:bg-[#f6f4f0] text-[13px] text-[#1d2d35] cursor-pointer transition-colors">
                         <span>Change your avatar...</span>
