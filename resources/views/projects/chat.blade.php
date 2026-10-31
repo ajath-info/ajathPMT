@@ -17,6 +17,44 @@
 @endphp
 
 <!-- Exact Basecamp Campfire Layout Matching media_1793273396851_5706aab7.jpg .. media_1793273801100_edc74e48.jpg -->
+<script>
+window.buildCampfireVoiceWavUrl = function(durationSecs) {
+    var sampleRate = 22050;
+    var dur = Math.max(1, durationSecs || 6);
+    var numSamples = sampleRate * dur;
+    var buffer = new ArrayBuffer(44 + numSamples * 2);
+    var view = new DataView(buffer);
+    function writeStr(offset, str) {
+        for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    }
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+    for (var i = 0; i < numSamples; i++) {
+        var t = i / sampleRate;
+        var syllable = Math.sin(2 * Math.PI * 3.2 * t) > -0.25 ? 1 : 0.15;
+        var env = Math.min(1, t * 8) * Math.min(1, (dur - t) * 6) * syllable;
+        var f0 = 165 + 25 * Math.sin(2 * Math.PI * 1.4 * t);
+        var wave = (
+            0.55 * Math.sin(2 * Math.PI * f0 * t) +
+            0.28 * Math.sin(2 * Math.PI * (f0 * 2) * t) +
+            0.12 * Math.sin(2 * Math.PI * (f0 * 3) * t)
+        ) * env * 0.28;
+        view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, wave)) * 32767, true);
+    }
+    return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+};
+</script>
 <div class="w-full sm:w-[72vw] max-w-[1130px] mx-auto font-sans text-[#1d2d35] relative"
      x-data="{
          activeView: new URLSearchParams(window.location.search).get('view') || 'chat',
@@ -51,41 +89,6 @@
          playingAudioId: null,
          audioProgress: {},
          audioTimer: null,
-         buildFallbackVoiceWavUrl(durationSecs) {
-             const sampleRate = 22050;
-             const numSamples = sampleRate * Math.max(1, durationSecs || 6);
-             const buffer = new ArrayBuffer(44 + numSamples * 2);
-             const view = new DataView(buffer);
-             const writeStr = (offset, str) => {
-                 for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-             };
-             writeStr(0, 'RIFF');
-             view.setUint32(4, 36 + numSamples * 2, true);
-             writeStr(8, 'WAVE');
-             writeStr(12, 'fmt ');
-             view.setUint32(16, 16, true);
-             view.setUint16(20, 1, true);
-             view.setUint16(22, 1, true);
-             view.setUint32(24, sampleRate, true);
-             view.setUint32(28, sampleRate * 2, true);
-             view.setUint16(32, 2, true);
-             view.setUint16(34, 16, true);
-             writeStr(36, 'data');
-             view.setUint32(40, numSamples * 2, true);
-             for (let i = 0; i < numSamples; i++) {
-                 const t = i / sampleRate;
-                 const syllable = Math.sin(2 * Math.PI * 3.2 * t) > -0.25 ? 1 : 0.15;
-                 const env = Math.min(1, t * 8) * Math.min(1, (durationSecs - t) * 6) * syllable;
-                 const f0 = 165 + 25 * Math.sin(2 * Math.PI * 1.4 * t);
-                 const wave = (
-                     0.55 * Math.sin(2 * Math.PI * f0 * t) +
-                     0.28 * Math.sin(2 * Math.PI * (f0 * 2) * t) +
-                     0.12 * Math.sin(2 * Math.PI * (f0 * 3) * t)
-                 ) * env * 0.28;
-                 view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, wave)) * 32767, true);
-             }
-             return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
-         },
          stopAllVoicePlayback() {
              clearInterval(this.audioTimer);
              if (window._activeCampfireAudio) {
@@ -117,7 +120,7 @@
                      }
                  } catch (e) {}
                  try {
-                     const wavUrl = this.buildFallbackVoiceWavUrl(total);
+                     const wavUrl = window.buildCampfireVoiceWavUrl(total);
                      const fallbackAud = new Audio(wavUrl);
                      fallbackAud.volume = (window.speechSynthesis ? 0.18 : 0.75);
                      window._activeCampfireAudio = fallbackAud;
@@ -229,7 +232,7 @@
         <button type="button"
                 @click="draftVisibility = chatVisibility; switchView('privacy')"
                 :class="chatVisibility === 'client' ? 'bg-[#fbf0c4] hover:bg-[#f6e6a5]' : 'bg-[#cfe6f7] hover:bg-[#bddcf4]'"
-                class="hidden lg:inline-flex items-center gap-1.5 text-[#1d2d35] text-[11.5px] font-bold py-3 px-1.5 rounded-r-[6px] absolute top-1.5 -right-[28px] z-10 select-none transition-colors cursor-pointer shadow-[1px_1px_3px_rgba(0,0,0,0.05)]"
+                class="inline-flex items-center gap-1.5 text-[#1d2d35] text-[11.5px] font-bold py-3 px-1.5 rounded-r-[6px] absolute top-1.5 -right-[29px] z-30 select-none transition-colors cursor-pointer shadow-[1px_1px_3px_rgba(0,0,0,0.08)]"
                 style="writing-mode: vertical-rl;">
             <svg x-show="chatVisibility === 'team'" class="w-3 h-3 fill-current rotate-90 flex-shrink-0" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
@@ -408,6 +411,15 @@
         <!-- VIEW 1: CAMPFIRE CHAT STREAM (activeView === 'chat')          -->
         <!-- ============================================================= -->
         <div x-show="activeView === 'chat'" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <!-- Client Shared Banner (Shown when "Allow the client to see this too" is active) -->
+            <div x-show="chatVisibility === 'client'" x-cloak class="px-5 py-1.5 bg-[#fbf0c4] border-b border-[#ebd888] flex items-center justify-center gap-1.5 text-[12.5px] font-semibold text-[#1d2d35] flex-shrink-0">
+                <svg class="w-3.5 h-3.5 fill-current flex-shrink-0" viewBox="0 0 20 20">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                </svg>
+                <span>The client can see this chat.</span>
+                <button type="button" @click="draftVisibility = chatVisibility; switchView('privacy')" class="underline font-bold cursor-pointer">Change</button>
+            </div>
             <!-- Messages Stream -->
             <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain px-10 py-6 space-y-2.5 bg-white" id="chat-messages">
                 @if($messages->isEmpty())
