@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', (request()->boolean('new') ? 'New message - ' : 'Message Board - ') . $project->name)
+@section('title', ((request()->boolean('new') || request()->is('*/new')) ? 'New message - ' : 'Message Board - ') . $project->name)
 
 @section('content')
 @php
@@ -20,22 +20,85 @@
 
 <div x-data="{
     storageKey: 'bc_msg_draft_project_{{ $project->id }}',
-    newMsgOpen: {{ request()->boolean('new') ? 'true' : 'false' }},
+    newMsgOpen: {{ (request()->boolean('new') || request()->is('*/new')) ? 'true' : 'false' }},
     draftTitle: '',
     draftContent: '',
     selectedCat: '',
     visibilityMode: 'team',
-    notifyMode: 'project',
-    notifySelectedIds: [1, 2, 3, 4, 5, 60, 62],
+    notifyMode: 'select',
+    notifyModalOpen: false,
+    notifySelectedIds: [4, 2, 3, 5, 61, 60, 62],
+    tempNotifySelectedIds: [4, 2, 3, 5, 61, 60, 62],
+    clientPerson: {
+        id: 99,
+        name: 'Edward',
+        role: 'Project Owner',
+        company: 'NDC Homes',
+        initials: 'E',
+        bg: '#e0522b',
+        avatar: null,
+        isClient: true
+    },
     notifyPeopleList: [
-        { id: 4, name: 'Gaurav Khulbey', role: 'Cybersecurity Expert', initials: 'GK', bg: '#d946ef', avatar: null },
-        { id: 1, name: 'Manjot Singh', role: 'Global VP & Partner', initials: 'M', bg: '#1d4ed8', avatar: '/uploads/avatars/22369668.png', isOoo: true },
-        { id: 2, name: 'Pawandeep Kaur', role: 'Manager', initials: 'PK', bg: '#00897b', avatar: null },
-        { id: 3, name: 'Prashant', role: 'Developer', initials: 'P', bg: '#0284c7', avatar: '/uploads/avatars/22369670.png' },
-        { id: 5, name: 'Rajesh Kumar', role: 'Developer', initials: 'RK', bg: '#d81b60', avatar: null },
-        { id: 60, name: 'Shachish Sneh', role: 'Solution Architect & Technology Master', initials: 'RO', bg: '#0d9488', avatar: null },
-        { id: 62, name: 'Shiv Narayan', role: 'Developer', initials: 'SN', bg: '#9333ea', avatar: null }
+        { id: 4, name: 'Gaurav Khulbey', role: 'Cybersecurity Expert', initials: 'GK', bg: '#d946ef', avatar: null, isClient: false },
+        { id: 2, name: 'Pawandeep Kaur', role: 'Manager', initials: 'PK', bg: '#00796b', avatar: null, isClient: false },
+        { id: 3, name: 'Prashant', role: 'Analyst', initials: 'P', bg: '#0284c7', avatar: '/uploads/avatars/22369742.png', isClient: false },
+        { id: 5, name: 'Rajesh Kumar', role: 'Project Lead', initials: 'RK', bg: '#d946ef', avatar: null, isClient: false },
+        { id: 61, name: 'Rishabh Ojha', role: 'Web Developer', initials: 'RO', bg: '#00796b', avatar: null, isClient: false },
+        { id: 60, name: 'Shachish Sneh', role: 'Solution Architect & Technology Master', initials: 'SS', bg: '#4f46e5', avatar: '/uploads/avatars/25036340.png', isClient: false },
+        { id: 62, name: 'Shiv Narayan', role: 'Full Stack Developer', initials: 'SN', bg: '#9333ea', avatar: null, isClient: false }
     ],
+    get allSelectablePeople() {
+        return [this.clientPerson, ...this.notifyPeopleList];
+    },
+    get selectedNotifyPeople() {
+        return this.allSelectablePeople.filter(p => {
+            if (p.isClient && this.visibilityMode !== 'client') return false;
+            return this.notifySelectedIds.includes(p.id);
+        });
+    },
+    onVisibilityChange() {
+        if (this.visibilityMode === 'client') {
+            if (!this.notifySelectedIds.includes(this.clientPerson.id)) {
+                this.notifySelectedIds = [this.clientPerson.id, ...this.notifySelectedIds];
+            }
+        } else {
+            this.notifySelectedIds = this.notifySelectedIds.filter(id => id !== this.clientPerson.id);
+        }
+        this.persistDraft(true);
+    },
+    openNotifyModal() {
+        this.notifyMode = 'select';
+        this.tempNotifySelectedIds = [...this.notifySelectedIds];
+        if (this.visibilityMode === 'client' && !this.tempNotifySelectedIds.includes(this.clientPerson.id)) {
+            this.tempNotifySelectedIds.unshift(this.clientPerson.id);
+        }
+        this.notifyModalOpen = true;
+    },
+    selectEveryoneInModal() {
+        const ids = this.notifyPeopleList.map(p => p.id);
+        ids.unshift(this.clientPerson.id);
+        this.tempNotifySelectedIds = ids;
+    },
+    selectNoOneInModal() {
+        this.tempNotifySelectedIds = [];
+    },
+    toggleTempNotifyPerson(id) {
+        if (this.tempNotifySelectedIds.includes(id)) {
+            this.tempNotifySelectedIds = this.tempNotifySelectedIds.filter(x => x !== id);
+        } else {
+            this.tempNotifySelectedIds = [...this.tempNotifySelectedIds, id];
+        }
+    },
+    saveNotifyModal() {
+        this.notifySelectedIds = [...this.tempNotifySelectedIds];
+        if (this.notifySelectedIds.includes(this.clientPerson.id)) {
+            this.visibilityMode = 'client';
+        }
+        this.notifyMode = 'select';
+        this.notifyModalOpen = false;
+        this.persistDraft(true);
+    },
     pickCatMenu: false,
     schedulePopover: false,
     scheduleBottomPopover: false,
@@ -57,7 +120,13 @@
                     this.draftContent = parsed.content || '';
                     this.selectedCat = parsed.category || '';
                     this.visibilityMode = parsed.visibilityMode || 'team';
-                    this.notifyMode = parsed.notifyMode || 'project';
+                    this.notifyMode = parsed.notifyMode || 'select';
+                    if (Array.isArray(parsed.notifySelectedIds)) {
+                        this.notifySelectedIds = parsed.notifySelectedIds;
+                    }
+                    if (this.visibilityMode === 'client' && !this.notifySelectedIds.includes(this.clientPerson.id)) {
+                        this.notifySelectedIds = [this.clientPerson.id, ...this.notifySelectedIds];
+                    }
                     if (parsed.isOpen || (this.draftTitle.trim() !== '' || this.draftContent.trim() !== '')) {
                         if ({{ request()->has('new') ? 'false' : 'true' }} && parsed.isOpen) {
                             this.newMsgOpen = true;
@@ -75,7 +144,8 @@
                 content: this.draftContent || '',
                 category: this.selectedCat || '',
                 visibilityMode: this.visibilityMode || 'team',
-                notifyMode: this.notifyMode || 'project',
+                notifyMode: this.notifyMode || 'select',
+                notifySelectedIds: this.notifySelectedIds,
                 isOpen: !!isOpenVal,
                 updatedAt: Date.now()
             }));
@@ -389,7 +459,7 @@
                               class="w-full flex-1 bg-transparent border-0 p-0 text-[16.5px] text-[#1d2d35] placeholder-[#8c8881] leading-relaxed focus:outline-none focus:ring-0 resize-none"></textarea>
                 </div>
 
-                <!-- Bottom "Who should see this?" & "When I post this, notify..." Box (Matches media_1793346426529_ed8b694d.jpg) -->
+                <!-- Bottom "Who should see this?" & "When I post this, notify..." Box (Matches media_1793436418688_ed559614.jpg - media_1793436447828_bbfac25d.jpg) -->
                 <div class="mx-8 sm:mx-14 mb-12 rounded-[10px] bg-[#faf7f2] px-6 py-5">
                     <!-- Who should see this? -->
                     <p class="text-[14px] font-bold text-[#1d2d35] mb-2">
@@ -397,18 +467,24 @@
                     </p>
                     <div class="space-y-2 text-[14.5px] text-[#1d2d35] mb-5">
                         <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                            <input type="radio" name="visibility_option" value="team" x-model="visibilityMode" @change="persistDraft(true)" class="w-4 h-4 accent-[#1d2d35]">
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#dbeafe] text-[#1d2d35] text-[13.5px] font-medium">
+                            <input type="radio" name="visibility_option" value="team" x-model="visibilityMode" @change="onVisibilityChange()" class="w-4 h-4 accent-[#1d2d35]">
+                            <span class="inline-flex items-center gap-1.5 text-[13.5px] font-medium transition-colors"
+                                  :class="visibilityMode === 'team'
+                                      ? 'px-2.5 py-0.5 rounded-full bg-[#d6e8fb] text-[#1d2d35]'
+                                      : 'px-1 text-[#1d2d35]'">
                                 <svg class="w-3.5 h-3.5 text-[#1d2d35]" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
                                 </svg>
-                                <span>Our team only—private to us</span>
+                                <span>Our team only&mdash;private to us</span>
                             </span>
                         </label>
 
                         <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                            <input type="radio" name="visibility_option" value="client" x-model="visibilityMode" @change="persistDraft(true)" class="w-4 h-4 accent-[#1d2d35]">
-                            <span class="inline-flex items-center gap-1.5 px-1 text-[#1d2d35] text-[14px]">
+                            <input type="radio" name="visibility_option" value="client" x-model="visibilityMode" @change="onVisibilityChange()" class="w-4 h-4 accent-[#1d2d35]">
+                            <span class="inline-flex items-center gap-1.5 text-[13.5px] font-medium transition-colors"
+                                  :class="visibilityMode === 'client'
+                                      ? 'px-2.5 py-0.5 rounded-full bg-[#f7d460] text-[#1d2d35]'
+                                      : 'px-1 text-[#1d2d35]'">
                                 <svg class="w-4 h-4 text-[#1d2d35]" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
                                     <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
@@ -423,40 +499,61 @@
                         When I post this, notify...
                     </p>
                     <div class="space-y-2 text-[14.5px] text-[#1d2d35]">
-                        <!-- Option 1: Only the 7 people + Avatar Row -->
+                        <!-- Option 1: Only the 7 people who asked to be notified about this project -->
                         <div>
                             <label class="flex items-center gap-2.5 cursor-pointer select-none">
                                 <input type="radio" name="notify_option" value="project" x-model="notifyMode" @change="persistDraft(true)" class="w-4 h-4 accent-[#1d2d35]">
-                                <span>Only the {{ $notifyCount }} people who asked to be notified about this project</span>
+                                <span>Only the 7 people who asked to be notified about this project</span>
                             </label>
-                            <div class="pl-6 mt-1.5 mb-1 flex items-center gap-1">
-                                <span class="w-[24px] h-[24px] rounded-full bg-[#e879f9] text-white font-bold text-[9.5px] flex items-center justify-center select-none">GK</span>
-                                <span class="relative w-[24px] h-[24px] rounded-full overflow-hidden inline-flex items-center justify-center">
-                                    <img src="/uploads/avatars/22369668.png" alt="Manjot Singh" class="w-full h-full object-cover">
-                                    <span class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
-                                        <span class="text-[4.5px] font-black text-[#1d1c1b] leading-none">OUT</span>
-                                    </span>
-                                </span>
-                                <span class="w-[24px] h-[24px] rounded-full bg-[#00897b] text-white font-bold text-[9.5px] flex items-center justify-center select-none">PK</span>
-                                <img src="/uploads/avatars/22369670.png" alt="Prashant" class="w-[24px] h-[24px] rounded-full object-cover">
-                                <span class="w-[24px] h-[24px] rounded-full bg-[#e879f9] text-white font-bold text-[9.5px] flex items-center justify-center select-none">RK</span>
-                                <span class="w-[24px] h-[24px] rounded-full bg-[#00897b] text-white font-bold text-[9.5px] flex items-center justify-center select-none">RO</span>
-                                <span class="w-[24px] h-[24px] rounded-full bg-[#9333ea] text-white font-bold text-[9.5px] flex items-center justify-center select-none">SN</span>
+                            <div x-show="notifyMode === 'project'" x-cloak class="pl-6 mt-1.5 mb-1 flex items-start gap-1">
+                                <template x-for="np in notifyPeopleList" :key="'proj-av-' + np.id">
+                                    <div class="flex flex-col items-center">
+                                        <template x-if="np.avatar">
+                                            <img :src="np.avatar" :alt="np.name" class="w-[24px] h-[24px] rounded-full object-cover select-none">
+                                        </template>
+                                        <template x-if="!np.avatar">
+                                            <span class="w-[24px] h-[24px] rounded-full text-white font-bold text-[9.5px] flex items-center justify-center select-none"
+                                                  :style="'background-color: ' + np.bg"
+                                                  x-text="np.initials"></span>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
 
-                        <!-- Option 2: Everyone I select... -->
+                        <!-- Option 2: Notify these N people. Change... -->
                         <div>
-                            <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                                <input type="radio" name="notify_option" value="select" x-model="notifyMode" @change="persistDraft(true)" class="w-4 h-4 accent-[#1d2d35]">
-                                <span>Everyone I select...</span>
-                            </label>
-                            <div x-show="notifyMode === 'select'" x-cloak class="pl-6 mt-2 mb-2 grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-[520px]">
-                                <template x-for="np in notifyPeopleList" :key="np.id">
-                                    <label class="flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] bg-white border border-[#e5e2dc] text-[13px] cursor-pointer select-none">
-                                        <input type="checkbox" :value="np.id" x-model="notifySelectedIds" class="w-3.5 h-3.5 accent-[#1b6ac9]">
-                                        <span class="font-semibold text-[#1d2d35] truncate" x-text="np.name"></span>
-                                    </label>
+                            <div class="flex items-center gap-2.5 select-none">
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="radio" name="notify_option" value="select" x-model="notifyMode" @change="persistDraft(true)" class="w-4 h-4 accent-[#1d2d35]">
+                                    <span x-text="'Notify these ' + selectedNotifyPeople.length + ' ' + (selectedNotifyPeople.length === 1 ? 'person.' : 'people.')"></span>
+                                </label>
+                                <button type="button"
+                                        @click="openNotifyModal()"
+                                        class="text-[#1b6ac9] underline hover:opacity-80 text-[14px] cursor-pointer">
+                                    Change...
+                                </button>
+                            </div>
+
+                            <!-- Avatar Row under Notify these N people -->
+                            <div x-show="notifyMode === 'select' && selectedNotifyPeople.length > 0"
+                                 x-cloak
+                                 class="pl-6 mt-1.5 mb-1 flex items-start gap-1">
+                                <template x-for="np in selectedNotifyPeople" :key="'sel-av-' + np.id">
+                                    <div class="flex flex-col items-center">
+                                        <template x-if="np.avatar">
+                                            <img :src="np.avatar" :alt="np.name" class="w-[24px] h-[24px] rounded-full object-cover select-none">
+                                        </template>
+                                        <template x-if="!np.avatar">
+                                            <span class="w-[24px] h-[24px] rounded-full text-white font-bold text-[9.5px] flex items-center justify-center select-none"
+                                                  :style="'background-color: ' + np.bg"
+                                                  x-text="np.initials"></span>
+                                        </template>
+                                        <span x-show="np.isClient"
+                                              class="text-[9.5px] font-bold text-[#1d2d35] leading-none mt-1">
+                                            Client
+                                        </span>
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -490,6 +587,108 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/>
                             </svg>
                         </button>
+                    </div>
+                </div>
+
+                <!-- "Who should be notified?" Modal (Exact Match to media_1793436440243_5b8053b6.jpg) -->
+                <div x-show="notifyModalOpen"
+                     x-cloak
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                     @click.self="notifyModalOpen = false">
+                    <div class="w-full max-w-[475px] rounded-[12px] bg-white shadow-[0_18px_50px_rgba(0,0,0,0.3)] p-6 text-left font-sans text-[#1d2d35]">
+                        <h3 class="text-[20px] font-extrabold text-[#1d2d35] tracking-[-0.02em] leading-snug">
+                            Who should be notified?
+                        </h3>
+                        <div class="mt-1 text-[13.5px] flex items-center gap-1.5">
+                            <button type="button"
+                                    @click="selectEveryoneInModal()"
+                                    class="text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
+                                Select everyone
+                            </button>
+                            <span class="text-[#6d6a65]">&bull;</span>
+                            <button type="button"
+                                    @click="selectNoOneInModal()"
+                                    class="text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
+                                Select no one
+                            </button>
+                        </div>
+
+                        <!-- Client Company Box: NDC Homes [Client] -->
+                        <div class="mt-4 mb-4 rounded-[10px] border border-[#f3d060] bg-white p-4">
+                            <div class="flex items-center gap-1.5 mb-3">
+                                <span class="text-[15.5px] font-extrabold text-[#1d2d35]">NDC Homes</span>
+                                <span class="px-2 py-0.5 rounded-[4px] bg-[#f9d976] text-[#1d2d35] text-[11px] font-bold leading-none">
+                                    Client
+                                </span>
+                            </div>
+                            <label class="flex items-center justify-between gap-3 cursor-pointer select-none"
+                                   @click.prevent="toggleTempNotifyPerson(clientPerson.id)">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <span class="w-[28px] h-[28px] rounded-full bg-[#e0522b] text-white font-bold text-[12px] flex items-center justify-center flex-shrink-0">
+                                        E
+                                    </span>
+                                    <div class="text-[14px] text-[#1d2d35] truncate">
+                                        <strong class="font-bold">Edward,</strong> Project Owner
+                                    </div>
+                                </div>
+                                <span class="w-[20px] h-[20px] rounded-[4px] flex items-center justify-center flex-shrink-0 transition-colors"
+                                      :class="tempNotifySelectedIds.includes(clientPerson.id)
+                                          ? 'bg-[#2da562] text-white'
+                                          : 'border border-[#b8b4ac] bg-white'">
+                                    <svg x-show="tempNotifySelectedIds.includes(clientPerson.id)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Team Company Section: Ajath Infotech Pvt Ltd -->
+                        <div class="text-[15.5px] font-extrabold text-[#1d2d35] mb-1.5">
+                            Ajath Infotech Pvt Ltd
+                        </div>
+                        <div class="max-h-[265px] overflow-y-auto divide-y divide-[#ece9e2] border-t border-[#ece9e2]">
+                            <template x-for="np in notifyPeopleList" :key="'modal-p-' + np.id">
+                                <label class="py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none"
+                                       @click.prevent="toggleTempNotifyPerson(np.id)">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <template x-if="np.avatar">
+                                            <img :src="np.avatar" :alt="np.name" class="w-[28px] h-[28px] rounded-full object-cover flex-shrink-0">
+                                        </template>
+                                        <template x-if="!np.avatar">
+                                            <span class="w-[28px] h-[28px] rounded-full text-white font-bold text-[11px] flex items-center justify-center flex-shrink-0"
+                                                  :style="'background-color: ' + np.bg"
+                                                  x-text="np.initials"></span>
+                                        </template>
+                                        <div class="text-[14px] text-[#1d2d35] truncate">
+                                            <strong class="font-bold" x-text="np.name + ','"></strong>
+                                            <span x-text="' ' + np.role"></span>
+                                        </div>
+                                    </div>
+                                    <span class="w-[20px] h-[20px] rounded-[4px] flex items-center justify-center flex-shrink-0 transition-colors"
+                                          :class="tempNotifySelectedIds.includes(np.id)
+                                              ? 'bg-[#2da562] text-white'
+                                              : 'border border-[#b8b4ac] bg-white'">
+                                        <svg x-show="tempNotifySelectedIds.includes(np.id)" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+
+                        <!-- Modal Footer Buttons: Save | Never mind -->
+                        <div class="mt-5 flex items-center gap-2">
+                            <button type="button"
+                                    @click="saveNotifyModal()"
+                                    class="px-4 py-1.5 rounded-[6px] bg-[#1b6ac9] hover:bg-[#1557a6] text-white font-semibold text-[13.5px] transition-colors cursor-pointer">
+                                Save
+                            </button>
+                            <button type="button"
+                                    @click="notifyModalOpen = false"
+                                    class="px-4 py-1.5 rounded-[6px] border border-[#bfd7f6] bg-white hover:bg-[#f5f9ff] text-[#1b6ac9] font-medium text-[13.5px] transition-colors cursor-pointer">
+                                Never mind
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>

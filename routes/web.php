@@ -106,6 +106,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/projects/{id}/tasks/{taskId}', [ProjectController::class, 'deleteTask'])->name('projects.tasks.delete');
 
     Route::get('/projects/{id}/discussions', [ProjectController::class, 'discussions'])->name('projects.discussions');
+    Route::get('/projects/{id}/discussions/new', [ProjectController::class, 'discussions'])->name('projects.discussions.new');
+    Route::get('/projects/{id}/messages/new', [ProjectController::class, 'discussions'])->name('projects.messages.new');
     Route::post('/projects/{id}/discussions', [ProjectController::class, 'storeDiscussion'])->name('projects.discussions.store');
     Route::get('/projects/{id}/discussions/{discId}', [ProjectController::class, 'showDiscussion'])->name('projects.discussions.show');
     Route::post('/projects/{id}/discussions/{discId}/comments', [ProjectController::class, 'storeComment'])->name('projects.discussions.comment');
