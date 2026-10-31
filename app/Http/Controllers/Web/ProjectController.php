@@ -726,48 +726,135 @@ class ProjectController extends Controller
             ];
         });
 
-        if ($project->id == 26 && $paginatedActivities->currentPage() == 1) {
-            $extraItems = collect([
-                (object)[
-                    'id' => 'tc_1252',
-                    'icon_type' => 'todo_comment',
-                    'author_name' => 'Shachish S.',
-                    'badge' => $badgeForUser('Shachish Sneh'),
-                    'action' => 'commented on',
-                    'title' => 'Payment Gateway',
-                    'url' => route('projects.tasks.show', [26, 1252]),
-                    'snippet' => 'Authorize.net username: ridemycars password: Rideme2026@#',
-                    'created_at' => \Carbon\Carbon::parse('2026-10-24 03:08:00'),
-                    'time_str' => '3:08am',
-                    'date_key' => '2026-10-24',
-                ],
-                (object)[
-                    'id' => 'tc_1251',
-                    'icon_type' => 'todo_comment',
-                    'author_name' => 'Shachish S.',
-                    'badge' => $badgeForUser('Shachish Sneh'),
-                    'action' => 'commented on',
-                    'title' => 'SMS Gateway',
-                    'url' => route('projects.tasks.show', [26, 1251]),
-                    'snippet' => 'https://app.nalosolutions.com/app/contacts ridemycars wEST123456# expresspaygh.com/developers/docs/accept-payments/merchant-api Kindly refer all integration/technical issues to integration@expresspaygh.com Merchant ID - 562786243097 API Key -...',
-                    'created_at' => \Carbon\Carbon::parse('2026-09-28 23:24:00'),
-                    'time_str' => '11:24pm',
-                    'date_key' => '2026-09-28',
-                ],
-                (object)[
-                    'id' => 'pa_26_1',
+        if ($paginatedActivities->currentPage() == 1) {
+            $extraItems = collect();
+
+            if ($project->id == 26) {
+                $extraItems = $extraItems->concat([
+                    (object)[
+                        'id' => 'tc_1252',
+                        'icon_type' => 'todo_comment',
+                        'author_name' => 'Shachish S.',
+                        'badge' => $badgeForUser('Shachish Sneh'),
+                        'action' => 'commented on',
+                        'title' => 'Payment Gateway',
+                        'url' => route('projects.tasks.show', [26, 1252]),
+                        'snippet' => 'Authorize.net username: ridemycars password: Rideme2026@#',
+                        'created_at' => \Carbon\Carbon::parse('2026-10-24 03:08:00'),
+                        'time_str' => '3:08am',
+                        'date_key' => '2026-10-24',
+                    ],
+                    (object)[
+                        'id' => 'tc_1251',
+                        'icon_type' => 'todo_comment',
+                        'author_name' => 'Shachish S.',
+                        'badge' => $badgeForUser('Shachish Sneh'),
+                        'action' => 'commented on',
+                        'title' => 'SMS Gateway',
+                        'url' => route('projects.tasks.show', [26, 1251]),
+                        'snippet' => 'https://app.nalosolutions.com/app/contacts ridemycars wEST123456# expresspaygh.com/developers/docs/accept-payments/merchant-api Kindly refer all integration/technical issues to integration@expresspaygh.com Merchant ID - 562786243097 API Key -...',
+                        'created_at' => \Carbon\Carbon::parse('2026-09-28 23:24:00'),
+                        'time_str' => '11:24pm',
+                        'date_key' => '2026-09-28',
+                    ],
+                    (object)[
+                        'id' => 'pa_26_1',
+                        'icon_type' => 'person_added',
+                        'author_name' => 'Shachish S.',
+                        'badge' => $badgeForUser('Shachish Sneh'),
+                        'action' => 'added Gaurav K., Prashant, Rajesh K., and 1 other to the project',
+                        'title' => '',
+                        'url' => '',
+                        'snippet' => '',
+                        'created_at' => \Carbon\Carbon::parse('2026-09-24 23:58:00'),
+                        'time_str' => '11:58pm',
+                        'date_key' => '2026-09-24',
+                    ],
+                ]);
+            }
+
+            // Recent project member invites/additions for this project
+            $cachedInvitesForProj = collect(\Illuminate\Support\Facades\Cache::get('bc_recent_project_invites', []))
+                ->filter(fn($inv) => (int) ($inv['project_id'] ?? 0) === (int) $project->id);
+            foreach ($cachedInvitesForProj as $idx => $inv) {
+                $dt = !empty($inv['created_at']) ? \Carbon\Carbon::parse($inv['created_at']) : now();
+                $extraItems->push((object)[
+                    'id' => 'inv_cache_' . $idx,
                     'icon_type' => 'person_added',
-                    'author_name' => 'Shachish S.',
-                    'badge' => $badgeForUser('Shachish Sneh'),
-                    'action' => 'added Gaurav K., Prashant, Rajesh K., and 1 other to the project',
+                    'author_name' => $inv['actor_name'] ?? 'Manjot S.',
+                    'badge' => $badgeForUser($inv['actor_full'] ?? 'Manjot Singh'),
+                    'action' => 'added ' . ($inv['added_text'] ?? 'a team member') . ' to the project',
                     'title' => '',
-                    'url' => '',
+                    'url' => route('projects.people', $project->id),
                     'snippet' => '',
-                    'created_at' => \Carbon\Carbon::parse('2026-09-24 23:58:00'),
-                    'time_str' => '11:58pm',
-                    'date_key' => '2026-09-24',
-                ],
-            ]);
+                    'created_at' => $dt,
+                    'time_str' => strtolower($dt->format('g:ia')),
+                    'date_key' => $dt->format('Y-m-d'),
+                ]);
+            }
+
+            $dbProjMembers = \App\Models\ProjectMember::with('user')
+                ->where('project_id', $project->id)
+                ->where(function ($q) {
+                    $q->where('updated_at', '>', '2026-10-30 12:00:00')
+                      ->orWhere('user_id', '>', 62);
+                })
+                ->latest('updated_at')
+                ->take(8)
+                ->get();
+            foreach ($dbProjMembers as $pmRow) {
+                if (!$pmRow->user) continue;
+                $uEmail = strtolower($pmRow->user->email ?? '');
+                $uNameLower = strtolower($pmRow->user->name ?? '');
+                $alreadyInCache = $cachedInvitesForProj->contains(function ($inv) use ($uEmail, $uNameLower) {
+                    $txt = strtolower($inv['added_text'] ?? '');
+                    return ($uEmail !== '' && str_contains($txt, $uEmail)) || ($uNameLower !== '' && str_contains($txt, $uNameLower));
+                });
+                if ($alreadyInCache) continue;
+                $dt = $pmRow->updated_at ?? $pmRow->created_at ?? now();
+                $label = !str_ends_with($uEmail, '@ajath.com') && $uEmail !== '' ? $uEmail : $uNameLower;
+                $extraItems->push((object)[
+                    'id' => 'pm_db_' . $pmRow->id,
+                    'icon_type' => 'person_added',
+                    'author_name' => 'Manjot S.',
+                    'badge' => $badgeForUser('Manjot Singh'),
+                    'action' => 'added ' . $label . ' to the project',
+                    'title' => '',
+                    'url' => route('projects.people', $project->id),
+                    'snippet' => '',
+                    'created_at' => $dt,
+                    'time_str' => strtolower($dt->format('g:ia')),
+                    'date_key' => $dt->format('Y-m-d'),
+                ]);
+            }
+
+            // Recent Campfire chats for this project
+            $recentProjChats = ChatMessage::with('sender')
+                ->where('project_id', $project->id)
+                ->where('type', 'project')
+                ->where('id', '>', 85436)
+                ->latest('created_at')
+                ->take(5)
+                ->get();
+            foreach ($recentProjChats as $cm) {
+                $dt = $cm->created_at ?? now();
+                $sName = $cm->sender->name ?? 'Manjot Singh';
+                $sParts = explode(' ', trim($sName));
+                $sShort = $sParts[0] . (isset($sParts[1]) ? ' ' . substr($sParts[1], 0, 1) . '.' : '');
+                $extraItems->push((object)[
+                    'id' => 'chat_' . $cm->id,
+                    'icon_type' => 'message',
+                    'author_name' => $sShort,
+                    'badge' => $badgeForUser($sName, $cm->sender->avatar_url ?? null, $cm->sender->email ?? null),
+                    'action' => 'said in Campfire:',
+                    'title' => \Illuminate\Support\Str::limit($cm->content, 48),
+                    'url' => route('projects.chat', $project->id),
+                    'snippet' => '',
+                    'created_at' => $dt,
+                    'time_str' => strtolower($dt->format('g:ia')),
+                    'date_key' => $dt->format('Y-m-d'),
+                ]);
+            }
 
             if ($activityFilter) {
                 $fLower = strtolower(trim($activityFilter));
@@ -781,6 +868,8 @@ class ProjectController extends Controller
                 ->sortByDesc(fn($it) => $it->date_key . ' ' . ($it->created_at ? $it->created_at->format('H:i:s') : '00:00:00'))
                 ->values();
         }
+
+        $latestProjectActivity = $timelineItems->first();
 
         // Group by date
         $activitiesByDay = $timelineItems->groupBy('date_key');
@@ -844,7 +933,8 @@ class ProjectController extends Controller
             'paginatedActivities',
             'daysTimeline',
             'projectMemberBadges',
-            'activityFilter'
+            'activityFilter',
+            'latestProjectActivity'
         ));
     }
 
@@ -2039,7 +2129,8 @@ class ProjectController extends Controller
             $projectMembers = [];
             foreach ($platformUsers as $pu) {
                 $lName = strtolower($pu['name']);
-                if (in_array($pu['id'], $dbMemberIds, true) || in_array($lName, $defaultTeamNames, true) || $lName === 'edward' || $lName === 'edward smith') {
+                $isEdwardOn26 = ($project->id == 26 && ($lName === 'edward' || $lName === 'edward smith'));
+                if (in_array($pu['id'], $dbMemberIds, true) || in_array($lName, $defaultTeamNames, true) || $isEdwardOn26) {
                     if ($lName === 'edward' || $lName === 'edward smith') {
                         $pu['bg'] = 'bg-[#e0522b]';
                         $pu['initials'] = 'E';
@@ -2056,11 +2147,15 @@ class ProjectController extends Controller
 
         // Normalize known profile avatars & client badges in projectMembers (even if loaded from cache)
         $hasRealManjotSingh = collect($projectMembers)->contains(fn($m) => strtolower(trim($m['name'] ?? '')) === 'manjot singh');
-        $projectMembers = array_values(array_filter($projectMembers, function ($pmItem) use ($hasRealManjotSingh) {
+        $projectMembers = array_values(array_filter($projectMembers, function ($pmItem) use ($hasRealManjotSingh, $project) {
             $pmLower = strtolower(trim($pmItem['name'] ?? ''));
             $pmEmail = strtolower(trim($pmItem['email'] ?? ''));
             // Remove accidental duplicate 'Manjot' if it was matched to Manjot Singh's ajath email
             if ($hasRealManjotSingh && $pmLower === 'manjot' && ($pmEmail === '' || $pmEmail === 'manjot@ajath.com')) {
+                return false;
+            }
+            // Only show Edward (NDC Homes) on non-26 projects when explicitly added
+            if ($project->id != 26 && ($pmLower === 'edward' || $pmLower === 'edward smith') && empty($pmItem['addedExplicitly'])) {
                 return false;
             }
             return true;
@@ -2198,9 +2293,9 @@ class ProjectController extends Controller
         $invitedEnrollees = [];
         $addedLabels = [];
 
-        if (in_array($action, ['invite_new', 'send_login_link', 'add'], true)) {
+        if (in_array($action, ['invite_new', 'send_login_link', 'add', 'add_bulk'], true)) {
             $itemsToProcess = [];
-            if ($action === 'invite_new' && !empty($pendingInvites)) {
+            if (in_array($action, ['invite_new', 'add_bulk'], true) && !empty($pendingInvites)) {
                 foreach ($pendingInvites as $pi) {
                     if (is_array($pi)) {
                         $itemsToProcess[] = $pi;
@@ -2272,10 +2367,11 @@ class ProjectController extends Controller
                     );
                 }
 
-                \App\Models\ProjectMember::firstOrCreate(
+                $pmRow = \App\Models\ProjectMember::updateOrCreate(
                     ['project_id' => $project->id, 'user_id' => $invitedUser->id],
                     ['role' => $isClient ? 'PROJECT_CLIENT' : 'PROJECT_MEMBER']
                 );
+                $pmRow->touch();
 
                 if (in_array($action, ['invite_new', 'send_login_link'], true) && $org) {
                     app(\App\Http\Controllers\Web\PeopleController::class)->sendInvitationEmail(
@@ -2304,6 +2400,7 @@ class ProjectController extends Controller
                     'jobTitle' => $jobTitle,
                     'isPending' => $isPendingFlag,
                     'roleBadge' => $newBadge,
+                    'addedExplicitly' => true,
                 ]);
 
                 if ($action === 'invite_new') {
@@ -2329,7 +2426,7 @@ class ProjectController extends Controller
                 \Illuminate\Support\Facades\Cache::forever('bc_project_last_invited_' . $project->id, $invitedEnrollees);
             }
 
-            if (!empty($addedLabels) && in_array($action, ['invite_new', 'add'], true)) {
+            if (!empty($addedLabels) && in_array($action, ['invite_new', 'add', 'add_bulk', 'send_login_link'], true)) {
                 $actorParts = preg_split('/\s+/', trim($user->name ?? 'Manjot Singh'));
                 $actorShort = ($actorParts[0] ?? 'Manjot') . (isset($actorParts[1]) ? ' ' . strtoupper(substr($actorParts[1], 0, 1)) . '.' : '');
                 $recentInvites = \Illuminate\Support\Facades\Cache::get('bc_recent_project_invites', []);
@@ -2344,7 +2441,7 @@ class ProjectController extends Controller
                     'project_name' => $project->name,
                     'created_at' => now()->toIso8601String(),
                 ]);
-                \Illuminate\Support\Facades\Cache::forever('bc_recent_project_invites', array_slice($recentInvites, 0, 12));
+                \Illuminate\Support\Facades\Cache::forever('bc_recent_project_invites', array_slice($recentInvites, 0, 15));
             }
         }
 

@@ -1032,7 +1032,21 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
             </p>
             @endif
 
-            @if($project->id == 4)
+            @if(!empty($latestProjectActivity) && !empty($latestProjectActivity->created_at) && \Carbon\Carbon::parse($latestProjectActivity->created_at)->greaterThanOrEqualTo(now()->subDays(5)))
+            @php
+                $lBadge = $latestProjectActivity->badge ?? (object)['initials' => 'M', 'bg' => 'bg-[#0d9488]', 'avatar' => null];
+                $lTimeText = \Carbon\Carbon::parse($latestProjectActivity->created_at)->diffForHumans();
+            @endphp
+            <div class="flex items-center gap-1.5 text-[13.5px] text-[#1d2d35] mt-2.5">
+                @if(!empty($lBadge->avatar))
+                    <img src="{{ $lBadge->avatar }}" alt="" class="w-[22px] h-[22px] rounded-full object-cover select-none">
+                @else
+                    <span class="w-[22px] h-[22px] rounded-full {{ $lBadge->bg ?? 'bg-[#0d9488]' }} text-white font-bold text-[9.5px] flex items-center justify-center select-none cursor-pointer">{{ $lBadge->initials ?? 'M' }}</span>
+                @endif
+                <span>active recently, latest {{ $lTimeText }} -</span>
+                <a href="#latest-activity" class="text-[#1b6ac9] underline hover:text-[#124b8f] font-normal">View activity</a>
+            </div>
+            @elseif($project->id == 4)
             <div class="flex items-center gap-1.5 text-[13.5px] text-[#1d2d35] mt-2.5">
                 <span class="w-[22px] h-[22px] rounded-full bg-[#d946ef] text-white font-bold text-[9.5px] flex items-center justify-center select-none cursor-pointer">GK</span>
                 <span>active recently, latest 5 hours ago -</span>

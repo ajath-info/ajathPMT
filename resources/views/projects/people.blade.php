@@ -49,6 +49,9 @@ html.bc-theme-dark .bc-client-switch-on {
         editingEmailMemberId: null,
         editingEmailValue: '',
         editingCompanyValue: 'Ajath Infotech Pvt Ltd',
+        pendingInvites: [],
+        welcomeMessage: 'Hi there. We\'ll be using Basecamp to share ideas, gather feedback, and track progress during this project.',
+        sendingInvites: false,
         oooActive: localStorage.getItem('bc_ooo_active') !== '0',
         platformUsers: {{ Js::from($platformUsers) }},
         members: ({{ Js::from($projectMembers) }} || []).map(m => Object.assign({ notifications: true, isPending: Boolean(m.isPending || m.roleBadge === 'Pending') }, m)),
@@ -144,6 +147,7 @@ html.bc-theme-dark .bc-client-switch-on {
                 const isCli = asClient || this.activeTab === 'clients' || Boolean(u.isClient);
                 const clone = Object.assign({}, u, {
                     isClient: isCli,
+                    addedExplicitly: true,
                     roleBadge: isCli ? 'Client' : (u.roleBadge || ''),
                     jobTitle: isCli && !(u.jobTitle || '').includes(' at ')
                         ? ((u.jobTitle || 'Project Owner') + ' at ' + (u.company || 'NDC Homes'))
@@ -159,6 +163,100 @@ html.bc-theme-dark .bc-client-switch-on {
             this.clientSearchQuery = '';
             this.dropdownOpen = false;
             this.addClientsModal = false;
+        },
+
+        queueEmailInvite(rawEmail) {
+            const email = (rawEmail || '').trim().toLowerCase();
+            if (!email || !email.includes('@')) return;
+            const namePart = email.split('@')[0].replace(/[._-]/g, ' ');
+            const formattedName = namePart.replace(/\b\w/g, l => l.toUpperCase());
+            const parts = formattedName.split(/\s+/);
+            const initials = ((parts[0] ? parts[0][0] : 'U') + (parts[1] ? parts[1][0] : '')).toUpperCase();
+
+            if (!this.pendingInvites.some(item => item.email.toLowerCase() === email)) {
+                this.pendingInvites.push({
+                    id: Date.now() + Math.floor(Math.random() * 1000),
+                    name: formattedName,
+                    email: email,
+                    label: email,
+                    initials: initials,
+                    bg: 'bg-[#0d9488]',
+                    roleBadge: 'Pending',
+                    isPending: true,
+                    jobTitle: 'Team Member',
+                    avatar: null,
+                    company: 'Outside collaborator',
+                    isClient: false,
+                    isSelf: false,
+                    addedExplicitly: true,
+                    notifications: true
+                });
+            }
+            this.searchQuery = '';
+            this.dropdownOpen = false;
+            this.companyPickerOpen = false;
+        },
+
+        removePendingInvite(idx) {
+            this.pendingInvites.splice(idx, 1);
+        },
+
+        sendQueuedInvites() {
+            if (this.pendingInvites.length === 0 || this.sendingInvites) return;
+            this.sendingInvites = true;
+            const queued = [...this.pendingInvites];
+
+            queued.forEach(newMember => {
+                const existingIdx = this.members.findIndex(m =>
+                    (m.email && m.email.toLowerCase() === newMember.email.toLowerCase()) ||
+                    (m.name && m.name.toLowerCase() === newMember.name.toLowerCase())
+                );
+                if (existingIdx !== -1) {
+                    this.members[existingIdx] = Object.assign({}, this.members[existingIdx], newMember);
+                    this.members = [...this.members];
+                } else {
+                    this.members = [...this.members, newMember];
+                }
+                if (!this.platformUsers.some(u => (u.email || '').toLowerCase() === newMember.email.toLowerCase())) {
+                    this.platformUsers = [...this.platformUsers, newMember];
+                }
+            });
+
+            const firstMember = queued[0];
+            const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+            fetch('{{ route('projects.people.update', $project->id) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token
+                },
+                body: JSON.stringify({
+                    action: 'invite_new',
+                    user_id: firstMember.id,
+                    is_client: false,
+                    target_member: firstMember,
+                    pending_invites: queued,
+                    welcome_message: this.welcomeMessage,
+                    members: this.members,
+                    access_mode: this.accessMode,
+                    clients_enabled: this.clientsEnabled
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                this.sendingInvites = false;
+                this.pendingInvites = [];
+                if (data && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                    return;
+                }
+                this.showToast('Invitation email sent to ' + firstMember.email + ' (Pending)');
+            })
+            .catch(() => {
+                this.sendingInvites = false;
+                this.pendingInvites = [];
+            });
         },
 
         openNewPersonForm(rawInput = '', asClient = false) {
@@ -193,6 +291,10 @@ html.bc-theme-dark .bc-client-switch-on {
                 return;
             }
             if (q.includes('@')) {
+                if (!asClient && this.activeTab !== 'clients') {
+                    this.queueEmailInvite(q);
+                    return;
+                }
                 const namePart = q.split('@')[0].replace(/[._-]/g, ' ');
                 this.newPersonName = namePart.replace(/\b\w/g, l => l.toUpperCase());
                 this.newPersonEmail = q;
@@ -240,6 +342,7 @@ html.bc-theme-dark .bc-client-switch-on {
                 company: company,
                 isClient: isCli,
                 isSelf: false,
+                addedExplicitly: true,
                 notifications: true
             };
 
@@ -370,14 +473,16 @@ html.bc-theme-dark .bc-client-switch-on {
         addCheckedCompanyPeople() {
             const chosen = this.platformUsers.filter(u => this.checkedUserIds.includes(u.id));
             let nextMembers = [...this.members];
+            const newlyAdded = [];
             chosen.forEach(u => {
                 if (!nextMembers.some(m => m.id === u.id)) {
-                    const clone = Object.assign({}, u, { notifications: true });
+                    const clone = Object.assign({}, u, { notifications: true, addedExplicitly: true });
                     nextMembers.push(clone);
+                    newlyAdded.push(clone);
                 }
             });
             this.members = nextMembers;
-            this.syncBackend('add_bulk', 0, false);
+            this.syncBackend('add_bulk', 0, false, newlyAdded[0] || null, newlyAdded);
             this.showToast(chosen.length + ' ' + (chosen.length === 1 ? 'person' : 'people') + ' added to this project.');
             this.checkedUserIds = [];
             this.companyPickerOpen = false;
@@ -388,7 +493,7 @@ html.bc-theme-dark .bc-client-switch-on {
             this.syncBackend('remove', id, false);
         },
 
-        syncBackend(action, userId, isClient, targetMember = null) {
+        syncBackend(action, userId, isClient, targetMember = null, bulkInvites = []) {
             const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
             fetch('{{ route('projects.people.update', $project->id) }}', {
                 method: 'POST',
@@ -402,6 +507,7 @@ html.bc-theme-dark .bc-client-switch-on {
                     user_id: userId,
                     is_client: isClient,
                     target_member: targetMember,
+                    pending_invites: bulkInvites,
                     members: this.members,
                     access_mode: this.accessMode,
                     clients_enabled: this.clientsEnabled
@@ -869,7 +975,11 @@ html.bc-theme-dark .bc-client-switch-on {
 
                 <!-- Client Company Section Header + "Add clients" Button -->
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-[17px] font-bold text-[#1d2d35]">NDC Homes</h2>
+                    <h2 x-show="clientMembers.length > 0"
+                        x-cloak
+                        class="text-[17px] font-bold text-[#1d2d35]"
+                        x-text="clientMembers[0]?.company || 'NDC Homes'"></h2>
+                    <div x-show="clientMembers.length === 0"></div>
                     <button type="button"
                             @click="addClientsModal = !addClientsModal"
                             class="px-4 py-1.5 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white text-[13.5px] font-semibold transition-colors cursor-pointer">

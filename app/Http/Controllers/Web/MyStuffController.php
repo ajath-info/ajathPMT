@@ -616,6 +616,19 @@ class MyStuffController extends Controller
                       ->orWhere('list_name', 'not like', 'Card Table:%');
                 })
                 ->where(function ($q) {
+                    $q->where('status', 'DONE')
+                      ->orWhere(function ($sub) {
+                          $sub->where(function ($d) {
+                              $d->whereNull('description')
+                                ->orWhere('description', '!=', 'Required environment & account setup checklist item from project template.');
+                          })
+                          ->where(function ($l) {
+                              $l->whereNull('list_name')
+                                ->orWhereNotIn('list_name', ['Dependency Checklist', 'Deliverables & Milestones', 'Launch Checklist']);
+                          });
+                      });
+                })
+                ->where(function ($q) {
                     $q->where('id', '>', 16161)
                       ->orWhere(function ($sub) {
                           $sub->where('status', 'DONE')
@@ -656,7 +669,34 @@ class MyStuffController extends Controller
                     ];
                 });
 
-            $timelineItems = $newProjectItems
+            $cachedInvites = \Illuminate\Support\Facades\Cache::get('bc_recent_project_invites', []);
+            if (!is_array($cachedInvites)) {
+                $cachedInvites = [];
+            }
+            $newInviteItems = collect($cachedInvites)->map(function ($inv, $idx) use ($badgeForUser) {
+                $dt = !empty($inv['created_at']) ? \Carbon\Carbon::parse($inv['created_at']) : now();
+                $pId = (int) ($inv['project_id'] ?? 26);
+                return (object)[
+                    'id' => 'inv_' . $idx,
+                    'icon_type' => 'person_added',
+                    'author_name' => $inv['actor_name'] ?? 'Manjot S.',
+                    'badge' => $badgeForUser($inv['actor_full'] ?? 'Manjot Singh'),
+                    'action' => 'added ' . ($inv['added_text'] ?? 'a team member') . ' to the project',
+                    'title' => '',
+                    'project_id' => $pId,
+                    'project_name' => $inv['project_name'] ?? 'Ride My Cars (Edward)',
+                    'project_url' => route('projects.show', $pId),
+                    'url' => route('projects.people', $pId),
+                    'snippet' => '',
+                    'created_at' => $dt,
+                    'time_str' => strtolower($dt->format('g:ia')),
+                    'date_key' => $dt->format('Y-m-d'),
+                    'sort_key' => $dt->toDateTimeString(),
+                ];
+            });
+
+            $timelineItems = $newInviteItems
+                ->concat($newProjectItems)
                 ->concat($newTaskItems)
                 ->concat($timelineItems)
                 ->sortByDesc('sort_key')
