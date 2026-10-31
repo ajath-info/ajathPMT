@@ -2168,6 +2168,17 @@ class ProjectController extends Controller
                     'roleBadge' => $newBadge,
                 ]);
 
+                if ($action === 'invite_new') {
+                    \Illuminate\Support\Facades\Cache::forever('bc_project_last_invited_' . $project->id, [
+                        [
+                            'id' => (int) $invitedUser->id,
+                            'name' => $invitedUser->name,
+                            'email' => $invitedUser->email,
+                            'role_type' => (strcasecmp($company, 'Ajath Infotech Pvt Ltd') === 0) ? 'employee' : 'outside_collaborator',
+                        ],
+                    ]);
+                }
+
                 foreach ($members as &$mItem) {
                     if (($mItem['id'] ?? null) == $oldId || strcasecmp($mItem['email'] ?? '', $email) === 0 || strcasecmp($mItem['name'] ?? '', $name) === 0) {
                         $mItem = array_merge($mItem, $updatedMemberPayload);
@@ -2192,11 +2203,129 @@ class ProjectController extends Controller
             return response()->json(['success' => true]);
         }
 
+        $redirectUrl = null;
+        if ($action === 'invite_new' && $updatedMemberPayload) {
+            $redirectUrl = route('projects.invitations.enrollees.edit', [
+                'id' => $project->id,
+                'email' => $updatedMemberPayload['email'],
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'email_sent' => $emailSent,
             'member' => $updatedMemberPayload,
+            'redirect_url' => $redirectUrl,
         ]);
+    }
+
+    public function editInvitationEnrollees(Request $request, $id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $org = \App\Models\Organization::find($project->organization_id)
+            ?? \App\Models\Organization::first();
+        $orgName = $org?->name ?: 'Ajath Infotech Pvt Ltd';
+
+        $emailParam = trim((string) $request->query('email', ''));
+        $enrollees = [];
+
+        if ($emailParam !== '') {
+            $dbUser = User::where('email', $emailParam)->first();
+            $enrollees[] = [
+                'id' => $dbUser ? (int) $dbUser->id : 0,
+                'name' => $dbUser ? $dbUser->name : explode('@', $emailParam)[0],
+                'email' => $emailParam,
+                'role_type' => 'outside_collaborator',
+            ];
+        } else {
+            $cached = \Illuminate\Support\Facades\Cache::get('bc_project_last_invited_' . $project->id);
+            if (is_array($cached) && !empty($cached)) {
+                $enrollees = $cached;
+            }
+        }
+
+        if (empty($enrollees)) {
+            $enrollees[] = [
+                'id' => 0,
+                'name' => 'Shachisheh',
+                'email' => 'shachisheh@gmail.com',
+                'role_type' => 'outside_collaborator',
+            ];
+        }
+
+        return view('projects.invitation_enrollees', compact('project', 'orgName', 'enrollees'));
+    }
+
+    public function updateInvitationEnrollees(Request $request, $id)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $org = \App\Models\Organization::find($project->organization_id)
+            ?? \App\Models\Organization::first();
+        $orgName = $org?->name ?: 'Ajath Infotech Pvt Ltd';
+
+        $submitted = $request->input('enrollees', []);
+        $savedPeopleState = \Illuminate\Support\Facades\Cache::get('bc_project_people_state_' . $project->id);
+        $members = (is_array($savedPeopleState) && isset($savedPeopleState['members']) && is_array($savedPeopleState['members']))
+            ? $savedPeopleState['members']
+            : [];
+
+        if (is_array($submitted)) {
+            foreach ($submitted as $item) {
+                $email = strtolower(trim($item['email'] ?? ''));
+                $roleType = ($item['role_type'] ?? 'outside_collaborator') === 'employee'
+                    ? 'employee'
+                    : 'outside_collaborator';
+                $company = $roleType === 'employee' ? $orgName : 'Outside collaborator';
+                $jobTitle = $roleType === 'employee' ? 'Team Member' : 'Outside Collaborator';
+
+                $dbUser = $email !== '' ? User::where('email', $email)->first() : null;
+                if (!$dbUser && !empty($item['id'])) {
+                    $dbUser = User::find((int) $item['id']);
+                }
+
+                if ($dbUser && $org) {
+                    \App\Models\OrganizationMember::updateOrCreate(
+                        ['organization_id' => $org->id, 'user_id' => $dbUser->id],
+                        [
+                            'role' => 'MEMBER',
+                            'client_company' => $company,
+                            'joined_at' => now(),
+                        ]
+                    );
+                    $dbUser->update(['job_title' => $jobTitle]);
+                }
+
+                foreach ($members as &$m) {
+                    if (($email !== '' && strcasecmp($m['email'] ?? '', $email) === 0) || (!empty($item['id']) && (int) ($m['id'] ?? 0) === (int) $item['id'])) {
+                        $m['company'] = $company;
+                        $m['jobTitle'] = $jobTitle;
+                        $m['isPending'] = true;
+                        if (empty($m['roleBadge']) || $m['roleBadge'] === 'Pending') {
+                            $m['roleBadge'] = 'Pending';
+                        }
+                    }
+                }
+                unset($m);
+            }
+        }
+
+        if (!empty($members)) {
+            \Illuminate\Support\Facades\Cache::forever('bc_project_people_state_' . $project->id, [
+                'members' => $members,
+                'access_mode' => $savedPeopleState['access_mode'] ?? 'invite_only',
+                'clients_enabled' => $savedPeopleState['clients_enabled'] ?? true,
+            ]);
+        }
+
+        return redirect()
+            ->route('projects.people', $project->id)
+            ->with('status', 'Changes saved! Invitation email sent.');
     }
 }
 

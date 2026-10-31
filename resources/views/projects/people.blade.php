@@ -192,6 +192,16 @@ html.bc-theme-dark .bc-client-switch-on {
                 this.addPlatformUser(match, asClient);
                 return;
             }
+            if (q.includes('@')) {
+                const namePart = q.split('@')[0].replace(/[._-]/g, ' ');
+                this.newPersonName = namePart.replace(/\b\w/g, l => l.toUpperCase());
+                this.newPersonEmail = q;
+                this.newPersonIsClient = Boolean(asClient || this.activeTab === 'clients');
+                this.newPersonCompany = this.newPersonIsClient ? 'NDC Homes' : 'Outside collaborator';
+                this.newPersonTitle = this.newPersonIsClient ? 'Project Owner' : 'Team Member';
+                this.submitNewPersonInvite();
+                return;
+            }
             this.openNewPersonForm(q, asClient);
         },
 
@@ -406,6 +416,9 @@ html.bc-theme-dark .bc-client-switch-on {
                         }
                         return item;
                     });
+                }
+                if (data && data.redirect_url && action === 'invite_new') {
+                    window.location.href = data.redirect_url;
                 }
             })
             .catch(() => {});
@@ -699,12 +712,21 @@ html.bc-theme-dark .bc-client-switch-on {
                                 <!-- Option to invite a new email/name if typed -->
                                 <div x-show="searchQuery.trim().length > 0" class="border-t border-[#ece9e2] mt-1 pt-1 px-2">
                                     <button type="button"
-                                            @click="openNewPersonForm(searchQuery, false)"
+                                            @click="addTypedPerson(false)"
                                             class="w-full px-2.5 py-2 rounded-[6px] text-left text-[13px] font-semibold text-[#1b6ac9] hover:bg-[#f6f4f0] cursor-pointer">
-                                        + Invite &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo; to Ajath Infotech Pvt Ltd &amp; this project...
+                                        + Send email invite to &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo;
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Send email invites button when typing a new email/name -->
+                        <div x-show="searchQuery.trim().length > 0" x-cloak class="mt-3">
+                            <button type="button"
+                                    @click="addTypedPerson(false)"
+                                    class="px-4 py-1.5 rounded-[6px] bg-[#198744] hover:bg-[#146c36] text-white font-semibold text-[13.5px] transition-colors cursor-pointer">
+                                Send email invites
+                            </button>
                         </div>
 
                         <!-- "Or pick people from a company..." + "Invite a new person to Ajath Infotech Pvt Ltd" Links -->

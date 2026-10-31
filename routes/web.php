@@ -130,6 +130,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/{id}/people/client_users/edit', [ProjectController::class, 'people'])->name('projects.client_people');
     Route::get('/projects/{id}/people', [ProjectController::class, 'people']);
     Route::post('/projects/{id}/people', [ProjectController::class, 'updatePeople'])->name('projects.people.update');
+    Route::get('/projects/{id}/invitations/enrollees/edit', [ProjectController::class, 'editInvitationEnrollees'])->name('projects.invitations.enrollees.edit');
+    Route::post('/projects/{id}/invitations/enrollees', [ProjectController::class, 'updateInvitationEnrollees'])->name('projects.invitations.enrollees.update');
     Route::get('/projects/{id}/checkins', [ProjectController::class, 'checkins'])->name('projects.checkins');
     Route::get('/projects/{id}/checkins/questions/new', [ProjectController::class, 'checkins'])->name('projects.checkins.questions.new');
     Route::post('/projects/{id}/checkins/questions', [ProjectController::class, 'storeCheckinQuestion'])->name('projects.checkins.questions.store');
