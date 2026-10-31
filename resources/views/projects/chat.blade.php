@@ -17,44 +17,6 @@
 @endphp
 
 <!-- Exact Basecamp Campfire Layout Matching media_1793273396851_5706aab7.jpg .. media_1793273801100_edc74e48.jpg -->
-<script>
-window.buildCampfireVoiceWavUrl = function(durationSecs) {
-    var sampleRate = 22050;
-    var dur = Math.max(1, durationSecs || 6);
-    var numSamples = sampleRate * dur;
-    var buffer = new ArrayBuffer(44 + numSamples * 2);
-    var view = new DataView(buffer);
-    function writeStr(offset, str) {
-        for (var i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-    }
-    writeStr(0, 'RIFF');
-    view.setUint32(4, 36 + numSamples * 2, true);
-    writeStr(8, 'WAVE');
-    writeStr(12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true);
-    view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true);
-    view.setUint16(34, 16, true);
-    writeStr(36, 'data');
-    view.setUint32(40, numSamples * 2, true);
-    for (var i = 0; i < numSamples; i++) {
-        var t = i / sampleRate;
-        var syllable = Math.sin(2 * Math.PI * 3.2 * t) > -0.25 ? 1 : 0.15;
-        var env = Math.min(1, t * 8) * Math.min(1, (dur - t) * 6) * syllable;
-        var f0 = 165 + 25 * Math.sin(2 * Math.PI * 1.4 * t);
-        var wave = (
-            0.55 * Math.sin(2 * Math.PI * f0 * t) +
-            0.28 * Math.sin(2 * Math.PI * (f0 * 2) * t) +
-            0.12 * Math.sin(2 * Math.PI * (f0 * 3) * t)
-        ) * env * 0.28;
-        view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, wave)) * 32767, true);
-    }
-    return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
-};
-</script>
 <div class="w-full sm:w-[72vw] max-w-[1130px] mx-auto font-sans text-[#1d2d35] relative"
      x-data="{
          activeView: new URLSearchParams(window.location.search).get('view') || 'chat',
@@ -109,33 +71,38 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
              this.playingAudioId = msgId;
              this.audioProgress[msgId] = 0;
              const total = Math.max(1, durationSecs || 6);
+             const resolvedSrc = (audioSrc && audioSrc !== 'null' && audioSrc !== '')
+                 ? audioSrc
+                 : (localStorage.getItem('bc_latest_voice_b64_{{ $project->id }}') || null);
 
-             const playFallback = () => {
-                 try {
-                     if (window.speechSynthesis) {
-                         const utter = new SpeechSynthesisUtterance('Hi team, please check the logo and latest update on the project.');
-                         utter.rate = 1.0;
-                         utter.volume = 1.0;
-                         window.speechSynthesis.speak(utter);
-                     }
-                 } catch (e) {}
-                 try {
-                     const wavUrl = window.buildCampfireVoiceWavUrl(total);
-                     const fallbackAud = new Audio(wavUrl);
-                     fallbackAud.volume = (window.speechSynthesis ? 0.18 : 0.75);
-                     window._activeCampfireAudio = fallbackAud;
-                     fallbackAud.play().catch(() => {});
-                 } catch (e) {}
-             };
-
-             if (audioSrc) {
-                 const aud = new Audio(audioSrc);
+             if (resolvedSrc) {
+                 const aud = new Audio(resolvedSrc);
                  window._activeCampfireAudio = aud;
-                 aud.play().catch(() => {
-                     playFallback();
-                 });
-             } else {
-                 playFallback();
+                 aud.ontimeupdate = () => {
+                     if (this.playingAudioId === msgId) {
+                         this.audioProgress[msgId] = Math.min(total, Math.floor(aud.currentTime));
+                     }
+                 };
+                 aud.onended = () => {
+                     clearInterval(this.audioTimer);
+                     if (this.playingAudioId === msgId) {
+                         this.audioProgress[msgId] = total;
+                         setTimeout(() => {
+                             if (this.playingAudioId === msgId) {
+                                 this.playingAudioId = null;
+                                 this.audioProgress[msgId] = 0;
+                             }
+                         }, 300);
+                     }
+                 };
+                 aud.play().catch(() => {});
+             } else if (window.speechSynthesis) {
+                 try {
+                     const utter = new SpeechSynthesisUtterance('Hi all');
+                     utter.rate = 1.0;
+                     utter.volume = 1.0;
+                     window.speechSynthesis.speak(utter);
+                 } catch (e) {}
              }
 
              this.audioTimer = setInterval(() => {
@@ -557,6 +524,15 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                             $isVoiceNote = true;
                             $voiceAudioUrl = '/uploads/campfire/' . trim($am[1]);
                         }
+                        if ($isVoiceNote) {
+                            $cachedVoiceB64 = \Illuminate\Support\Facades\Cache::get('bc_voice_note_audio_' . $msg->id);
+                            if (!$cachedVoiceB64 && !$voiceAudioUrl) {
+                                $cachedVoiceB64 = \Illuminate\Support\Facades\Cache::get('bc_latest_voice_note_project_' . $project->id);
+                            }
+                            if ($cachedVoiceB64) {
+                                $voiceAudioUrl = $cachedVoiceB64;
+                            }
+                        }
 
                         $imageFile = null;
                         if (preg_match('/\[Attachment:\s*([^\]]+\.(?:png|jpg|jpeg|gif|webp|pdf))\]/i', $rawContent, $m)) {
@@ -673,7 +649,8 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                                 @if($isVoiceNote)
                                     <div class="inline-flex items-center gap-3 py-1 min-w-[215px]">
                                         <button type="button"
-                                                @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, {{ $voiceAudioUrl ? "'" . $voiceAudioUrl . "'" : 'null' }})"
+                                                data-audio-src="{{ $voiceAudioUrl ?? '' }}"
+                                                @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, $el.dataset.audioSrc)"
                                                 class="w-8 h-8 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white flex items-center justify-center flex-shrink-0 shadow-xs cursor-pointer transition-colors">
                                             <svg x-show="playingAudioId !== {{ $msg->id }}" class="w-3.5 h-3.5 fill-current translate-x-[1px]" viewBox="0 0 20 20"><polygon points="5,3 17,10 5,17"/></svg>
                                             <svg x-show="playingAudioId === {{ $msg->id }}" x-cloak class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
@@ -761,7 +738,8 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                                         @endif
                                         <div class="inline-flex items-center gap-3 py-1 min-w-[215px]">
                                             <button type="button"
-                                                    @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, {{ $voiceAudioUrl ? "'" . $voiceAudioUrl . "'" : 'null' }})"
+                                                    data-audio-src="{{ $voiceAudioUrl ?? '' }}"
+                                                    @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, $el.dataset.audioSrc)"
                                                     class="w-8 h-8 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white flex items-center justify-center flex-shrink-0 shadow-xs cursor-pointer transition-colors">
                                                 <svg x-show="playingAudioId !== {{ $msg->id }}" class="w-3.5 h-3.5 fill-current translate-x-[1px]" viewBox="0 0 20 20"><polygon points="5,3 17,10 5,17"/></svg>
                                                 <svg x-show="playingAudioId === {{ $msg->id }}" x-cloak class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
@@ -922,7 +900,6 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                         this.recordingAudio = true;
                         this.recordSeconds = 0;
                         clearInterval(this.recordTimer);
-                        this.recordTimer = setInterval(() => { this.recordSeconds++; }, 1000);
                         window._campfireAudioChunks = [];
                         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
@@ -933,7 +910,14 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                                     if (ev.data && ev.data.size > 0) window._campfireAudioChunks.push(ev.data);
                                 };
                                 mr.start(200);
-                            }).catch(() => {});
+                                this.recordSeconds = 0;
+                                clearInterval(this.recordTimer);
+                                this.recordTimer = setInterval(() => { this.recordSeconds++; }, 1000);
+                            }).catch(() => {
+                                this.recordTimer = setInterval(() => { this.recordSeconds++; }, 1000);
+                            });
+                        } else {
+                            this.recordTimer = setInterval(() => { this.recordSeconds++; }, 1000);
                         }
                     },
                     stopAudioRecord(attach) {
@@ -949,24 +933,18 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                             if (inp) {
                                 inp.value = (inp.value ? inp.value + ' ' : '') + '🎙️ Voice Note (' + mins + ':' + secs + ')';
                             }
-                            if (blob && blob.size > 0) {
-                                try {
-                                    if (this.$refs.campfireFileInput) {
-                                        const file = new File([blob], 'voice_note_' + Date.now() + '.webm', { type: blob.type || 'audio/webm' });
-                                        const dt = new DataTransfer();
-                                        dt.items.add(file);
-                                        this.$refs.campfireFileInput.files = dt.files;
-                                    }
-                                } catch (e) {}
-                                if (b64Inp) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                        b64Inp.value = reader.result || '';
-                                        if (form) form.submit();
-                                    };
-                                    reader.readAsDataURL(blob);
-                                    return;
-                                }
+                            if (blob && blob.size > 0 && b64Inp) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                    const dataUrl = reader.result || '';
+                                    b64Inp.value = dataUrl;
+                                    try {
+                                        if (dataUrl) localStorage.setItem('bc_latest_voice_b64_{{ $project->id }}', dataUrl);
+                                    } catch (e) {}
+                                    if (form) form.submit();
+                                };
+                                reader.readAsDataURL(blob);
+                                return;
                             }
                             if (form) {
                                 form.submit();
@@ -985,6 +963,7 @@ window.buildCampfireVoiceWavUrl = function(durationSecs) {
                                     finishSend(blob);
                                 }
                             };
+                            try { window._campfireMediaRecorder.requestData(); } catch (e) {}
                             window._campfireMediaRecorder.stop();
                         } else {
                             if (window._campfireMediaStream) {

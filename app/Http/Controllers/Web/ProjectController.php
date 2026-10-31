@@ -1800,30 +1800,15 @@ class ProjectController extends Controller
         ]);
 
         $content = trim((string) $request->input('content', ''));
+        $savedAudioB64 = null;
 
-        if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
-            $origName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName() ?: 'attachment.png');
-            $destDir = public_path('uploads/campfire');
-            if (!is_dir($destDir)) {
-                @mkdir($destDir, 0755, true);
-            }
-            $file->move($destDir, $origName);
-            $baseDestDir = base_path('uploads/campfire');
-            if ($baseDestDir !== $destDir) {
-                if (!is_dir($baseDestDir)) {
-                    @mkdir($baseDestDir, 0755, true);
-                }
-                @copy($destDir . '/' . $origName, $baseDestDir . '/' . $origName);
-            }
-            $attachmentTag = '[Attachment: ' . $origName . ']';
-            $content = $content !== '' ? ($attachmentTag . "\n" . $content) : $attachmentTag;
-        } elseif ($request->filled('audio_base64')) {
-            $b64 = (string) $request->input('audio_base64', '');
+        if ($request->filled('audio_base64')) {
+            $b64 = trim((string) $request->input('audio_base64', ''));
             if (preg_match('/^data:audio\/([a-zA-Z0-9+-]+).*?;base64,(.+)$/s', $b64, $am)) {
+                $savedAudioB64 = $b64;
                 $rawBytes = base64_decode($am[2], true);
                 if ($rawBytes !== false && strlen($rawBytes) > 0) {
-                    $ext = strtolower($am[1]) === 'mp4' ? 'm4a' : (strtolower($am[1]) === 'wav' ? 'wav' : 'webm');
+                    $ext = strtolower($am[1]) === 'mp4' ? 'm4a' : (strtolower($am[1]) === 'wav' ? 'wav' : (strtolower($am[1]) === 'ogg' ? 'ogg' : 'webm'));
                     $origName = 'voice_note_' . time() . '_' . rand(100, 999) . '.' . $ext;
                     $destDir = public_path('uploads/campfire');
                     if (!is_dir($destDir)) {
@@ -1841,19 +1826,41 @@ class ProjectController extends Controller
                     $content = $content !== '' ? ($attachmentTag . "\n" . $content) : $attachmentTag;
                 }
             }
+        } elseif ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $origName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName() ?: 'attachment.png');
+            $destDir = public_path('uploads/campfire');
+            if (!is_dir($destDir)) {
+                @mkdir($destDir, 0755, true);
+            }
+            $file->move($destDir, $origName);
+            $baseDestDir = base_path('uploads/campfire');
+            if ($baseDestDir !== $destDir) {
+                if (!is_dir($baseDestDir)) {
+                    @mkdir($baseDestDir, 0755, true);
+                }
+                @copy($destDir . '/' . $origName, $baseDestDir . '/' . $origName);
+            }
+            $attachmentTag = '[Attachment: ' . $origName . ']';
+            $content = $content !== '' ? ($attachmentTag . "\n" . $content) : $attachmentTag;
         }
 
         if ($content === '') {
             return back();
         }
 
-        ChatMessage::create([
+        $chatMsg = ChatMessage::create([
             'project_id' => $project->id,
             'organization_id' => $project->organization_id,
             'sender_id' => $user->id,
             'content' => $content,
             'type' => 'project',
         ]);
+
+        if ($savedAudioB64) {
+            \Illuminate\Support\Facades\Cache::forever('bc_voice_note_audio_' . $chatMsg->id, $savedAudioB64);
+            \Illuminate\Support\Facades\Cache::forever('bc_latest_voice_note_project_' . $project->id, $savedAudioB64);
+        }
 
         return back()->with('success', 'Message sent.');
     }
