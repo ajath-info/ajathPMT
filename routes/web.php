@@ -118,6 +118,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/projects/{id}/chat', [ProjectController::class, 'chat'])->name('projects.chat');
     Route::get('/projects/{id}/campfire', [ProjectController::class, 'chat'])->name('projects.campfire');
     Route::post('/projects/{id}/chat', [ProjectController::class, 'storeChat'])->name('projects.chat.store');
+    Route::delete('/projects/{id}/chat/{messageId}', [ProjectController::class, 'destroyChat'])->name('projects.chat.destroy');
     Route::get('/projects/{id}/email-forwards', [ProjectController::class, 'discussions'])->name('projects.email-forwards');
 
     Route::get('/projects/{id}/schedule', [ProjectController::class, 'schedule'])->name('projects.schedule');

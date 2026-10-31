@@ -1720,6 +1720,24 @@ class ProjectController extends Controller
         return back()->with('success', 'Message sent.');
     }
 
+    public function destroyChat(Request $request, $id, $messageId)
+    {
+        $user = Auth::user();
+        $project = Project::findOrFail($id);
+        $this->checkProjectAccess($project, $user);
+
+        $msg = ChatMessage::where('project_id', $project->id)->where('id', $messageId)->first();
+        if ($msg) {
+            $msg->delete();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return back()->with('success', 'Message deleted.');
+    }
+
     // SCHEDULE
     public function schedule($id)
     {
@@ -1883,7 +1901,8 @@ class ProjectController extends Controller
             $lowerName = strtolower($cleanName);
             $matchedProfile = null;
             foreach ($knownProfiles as $k => $prof) {
-                if (str_contains($lowerName, $k) && $lowerName !== 'shachisheh') {
+                $profFullLower = strtolower($prof['name']);
+                if ($lowerName === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($lowerName, $k))) {
                     $matchedProfile = $prof;
                     break;
                 }
@@ -2000,11 +2019,23 @@ class ProjectController extends Controller
         }
 
         // Normalize known profile avatars & client badges in projectMembers (even if loaded from cache)
+        $hasRealManjotSingh = collect($projectMembers)->contains(fn($m) => strtolower(trim($m['name'] ?? '')) === 'manjot singh');
+        $projectMembers = array_values(array_filter($projectMembers, function ($pmItem) use ($hasRealManjotSingh) {
+            $pmLower = strtolower(trim($pmItem['name'] ?? ''));
+            $pmEmail = strtolower(trim($pmItem['email'] ?? ''));
+            // Remove accidental duplicate 'Manjot' if it was matched to Manjot Singh's ajath email
+            if ($hasRealManjotSingh && $pmLower === 'manjot' && ($pmEmail === '' || $pmEmail === 'manjot@ajath.com')) {
+                return false;
+            }
+            return true;
+        }));
+
         foreach ($projectMembers as &$pmItem) {
             $pmLower = strtolower(trim($pmItem['name'] ?? ''));
             $matchedKnown = false;
             foreach ($knownProfiles as $k => $prof) {
-                if ($pmLower !== '' && str_contains($pmLower, $k) && $pmLower !== 'shachisheh') {
+                $profFullLower = strtolower($prof['name']);
+                if ($pmLower !== '' && ($pmLower === $profFullLower || (in_array($k, ['edward', 'muaad', 'doug'], true) && str_contains($pmLower, $k)))) {
                     if (!empty($prof['avatar'])) {
                         $pmItem['avatar'] = $prof['avatar'];
                     }
@@ -2018,6 +2049,16 @@ class ProjectController extends Controller
             }
 
             if (!$matchedKnown) {
+                // If an external invite named 'Manjot' previously got Manjot Singh's Owner badge/avatar, reset it
+                if ($pmLower === 'manjot' && ($pmItem['roleBadge'] ?? '') === 'Owner') {
+                    $pmItem['roleBadge'] = 'Pending';
+                    $pmItem['avatar'] = null;
+                    $pmItem['initials'] = 'M';
+                    $pmItem['bg'] = 'bg-[#0d9488]';
+                    $pmItem['jobTitle'] = 'Team Member';
+                    $pmItem['isSelf'] = false;
+                }
+
                 $dbUser = null;
                 if (!empty($pmItem['email'])) {
                     $dbUser = $allDbUsers->first(fn($u) => strcasecmp($u->email, $pmItem['email']) === 0);
@@ -2103,23 +2144,40 @@ class ProjectController extends Controller
         $targetUserId = (int) $request->input('user_id', 0);
         $isClient = $request->boolean('is_client', false);
         $targetMember = $request->input('target_member');
+        $pendingInvites = is_array($request->input('pending_invites')) ? $request->input('pending_invites') : [];
+        $welcomeMessage = trim((string) $request->input('welcome_message', ''));
         $members = is_array($request->input('members')) ? $request->input('members') : [];
 
         $updatedMemberPayload = null;
         $emailSent = false;
+        $invitedEnrollees = [];
+        $addedLabels = [];
 
         if (in_array($action, ['invite_new', 'send_login_link', 'add'], true)) {
-            $memberData = is_array($targetMember) ? $targetMember : null;
-            if (!$memberData && $targetUserId > 0) {
-                foreach ($members as $m) {
-                    if ((int) ($m['id'] ?? 0) === $targetUserId) {
-                        $memberData = $m;
-                        break;
+            $itemsToProcess = [];
+            if ($action === 'invite_new' && !empty($pendingInvites)) {
+                foreach ($pendingInvites as $pi) {
+                    if (is_array($pi)) {
+                        $itemsToProcess[] = $pi;
                     }
                 }
             }
+            if (empty($itemsToProcess)) {
+                $memberData = is_array($targetMember) ? $targetMember : null;
+                if (!$memberData && $targetUserId > 0) {
+                    foreach ($members as $m) {
+                        if ((int) ($m['id'] ?? 0) === $targetUserId) {
+                            $memberData = $m;
+                            break;
+                        }
+                    }
+                }
+                if ($memberData) {
+                    $itemsToProcess[] = $memberData;
+                }
+            }
 
-            if ($memberData) {
+            foreach ($itemsToProcess as $memberData) {
                 $name = trim($memberData['name'] ?? 'Team Member');
                 $email = strtolower(trim($memberData['email'] ?? ''));
                 if ($email === '' || !str_contains($email, '@')) {
@@ -2133,7 +2191,7 @@ class ProjectController extends Controller
                 $jobTitle = trim($memberData['jobTitle'] ?? ($isClient ? 'Project Owner at ' . $company : 'Team Member'));
 
                 $invitedUser = User::where('email', $email)->first();
-                if (!$invitedUser && $targetUserId > 0 && $targetUserId < 9000) {
+                if (!$invitedUser && $targetUserId > 0 && $targetUserId < 9000 && count($itemsToProcess) === 1) {
                     $invitedUser = User::find($targetUserId);
                 }
 
@@ -2175,7 +2233,12 @@ class ProjectController extends Controller
                 );
 
                 if (in_array($action, ['invite_new', 'send_login_link'], true) && $org) {
-                    app(\App\Http\Controllers\Web\PeopleController::class)->sendInvitationEmail($invitedUser, $org, $user);
+                    app(\App\Http\Controllers\Web\PeopleController::class)->sendInvitationEmail(
+                        $invitedUser,
+                        $org,
+                        $user,
+                        $welcomeMessage !== '' ? $welcomeMessage : null
+                    );
                     $emailSent = true;
                 }
 
@@ -2199,15 +2262,15 @@ class ProjectController extends Controller
                 ]);
 
                 if ($action === 'invite_new') {
-                    \Illuminate\Support\Facades\Cache::forever('bc_project_last_invited_' . $project->id, [
-                        [
-                            'id' => (int) $invitedUser->id,
-                            'name' => $invitedUser->name,
-                            'email' => $invitedUser->email,
-                            'role_type' => (strcasecmp($company, 'Ajath Infotech Pvt Ltd') === 0) ? 'employee' : 'outside_collaborator',
-                        ],
-                    ]);
+                    $invitedEnrollees[] = [
+                        'id' => (int) $invitedUser->id,
+                        'name' => $invitedUser->name,
+                        'email' => $invitedUser->email,
+                        'role_type' => 'outside_collaborator',
+                    ];
                 }
+
+                $addedLabels[] = ($action === 'invite_new') ? $invitedUser->email : strtolower($invitedUser->name);
 
                 foreach ($members as &$mItem) {
                     if (($mItem['id'] ?? null) == $oldId || strcasecmp($mItem['email'] ?? '', $email) === 0 || strcasecmp($mItem['name'] ?? '', $name) === 0) {
@@ -2215,6 +2278,28 @@ class ProjectController extends Controller
                     }
                 }
                 unset($mItem);
+            }
+
+            if ($action === 'invite_new' && !empty($invitedEnrollees)) {
+                \Illuminate\Support\Facades\Cache::forever('bc_project_last_invited_' . $project->id, $invitedEnrollees);
+            }
+
+            if (!empty($addedLabels) && in_array($action, ['invite_new', 'add'], true)) {
+                $actorParts = preg_split('/\s+/', trim($user->name ?? 'Manjot Singh'));
+                $actorShort = ($actorParts[0] ?? 'Manjot') . (isset($actorParts[1]) ? ' ' . strtoupper(substr($actorParts[1], 0, 1)) . '.' : '');
+                $recentInvites = \Illuminate\Support\Facades\Cache::get('bc_recent_project_invites', []);
+                if (!is_array($recentInvites)) {
+                    $recentInvites = [];
+                }
+                array_unshift($recentInvites, [
+                    'actor_name' => $actorShort,
+                    'actor_full' => $user->name ?? 'Manjot Singh',
+                    'added_text' => implode(' and ', array_unique($addedLabels)),
+                    'project_id' => $project->id,
+                    'project_name' => $project->name,
+                    'created_at' => now()->toIso8601String(),
+                ]);
+                \Illuminate\Support\Facades\Cache::forever('bc_recent_project_invites', array_slice($recentInvites, 0, 12));
             }
         }
 

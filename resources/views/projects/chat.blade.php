@@ -44,8 +44,74 @@
              }, 200);
          },
          notifying: {{ ($project->status === 'ARCHIVED' || $project->id == 5) ? 'true' : 'false' }},
-         chatVisibility: 'team',
-         draftVisibility: 'team',
+         chatVisibility: localStorage.getItem('bc_chat_visibility_{{ $project->id }}') || 'team',
+         draftVisibility: localStorage.getItem('bc_chat_visibility_{{ $project->id }}') || 'team',
+         openMsgMenuId: null,
+         deletedMsgIds: [],
+         playingAudioId: null,
+         audioProgress: {},
+         audioTimer: null,
+         toggleVoicePlayback(msgId, durationSecs, audioSrc = null) {
+             if (this.playingAudioId === msgId) {
+                 this.playingAudioId = null;
+                 clearInterval(this.audioTimer);
+                 if (window._activeCampfireAudio) {
+                     window._activeCampfireAudio.pause();
+                     window._activeCampfireAudio = null;
+                 }
+                 return;
+             }
+             clearInterval(this.audioTimer);
+             if (window._activeCampfireAudio) {
+                 window._activeCampfireAudio.pause();
+                 window._activeCampfireAudio = null;
+             }
+             this.playingAudioId = msgId;
+             this.audioProgress[msgId] = 0;
+             const total = Math.max(1, durationSecs || 6);
+             if (audioSrc) {
+                 const aud = new Audio(audioSrc);
+                 window._activeCampfireAudio = aud;
+                 aud.play().catch(() => {});
+             } else {
+                 try {
+                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                     const osc = ctx.createOscillator();
+                     const gain = ctx.createGain();
+                     osc.type = 'sine';
+                     osc.frequency.setValueAtTime(440, ctx.currentTime);
+                     gain.gain.setValueAtTime(0.03, ctx.currentTime);
+                     osc.connect(gain);
+                     gain.connect(ctx.destination);
+                     osc.start();
+                     osc.stop(ctx.currentTime + 0.25);
+                 } catch (e) {}
+             }
+             this.audioTimer = setInterval(() => {
+                 const next = (this.audioProgress[msgId] || 0) + 1;
+                 if (next >= total) {
+                     this.audioProgress[msgId] = total;
+                     clearInterval(this.audioTimer);
+                     setTimeout(() => {
+                         this.playingAudioId = null;
+                         this.audioProgress[msgId] = 0;
+                     }, 400);
+                 } else {
+                     this.audioProgress[msgId] = next;
+                 }
+             }, 1000);
+         },
+         deleteChatMessage(msgId) {
+             this.openMsgMenuId = null;
+             this.deletedMsgIds.push(msgId);
+             fetch('/projects/{{ $project->id }}/chat/' + msgId, {
+                 method: 'DELETE',
+                 headers: {
+                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                     'Accept': 'application/json'
+                 }
+             }).catch(() => {});
+         },
          moreMenuOpen: false,
          bubbleUpOpen: false,
          copiedToast: false,
@@ -109,10 +175,11 @@
     <!-- Basecamp White Paper Sheet + Right Vertical Privacy Tab -->
     <div class="relative">
         @if($project->id != 4 && $project->id != 5)
-        <!-- Right Vertical Blue Privacy Tab (Matches media_1793339157521_028ad416.png & media_1793346486764_dd35dd2f.jpg) -->
+        <!-- Right Vertical Privacy Tab (Matches media_1793339157521_028ad416.png & media_1793346486764_dd35dd2f.jpg) -->
         <button type="button"
                 @click="draftVisibility = chatVisibility; switchView('privacy')"
-                class="hidden lg:inline-flex items-center gap-1.5 bg-[#cfe6f7] hover:bg-[#bddcf4] text-[#1d2d35] text-[11.5px] font-bold py-3 px-1 rounded-r-[6px] absolute top-1.5 -right-[23px] z-10 select-none transition-colors cursor-pointer"
+                :class="chatVisibility === 'client' ? 'bg-[#fbf0c4] hover:bg-[#f6e6a5]' : 'bg-[#cfe6f7] hover:bg-[#bddcf4]'"
+                class="hidden lg:inline-flex items-center gap-1.5 text-[#1d2d35] text-[11.5px] font-bold py-3 px-1.5 rounded-r-[6px] absolute top-1.5 -right-[28px] z-10 select-none transition-colors cursor-pointer shadow-[1px_1px_3px_rgba(0,0,0,0.05)]"
                 style="writing-mode: vertical-rl;">
             <svg x-show="chatVisibility === 'team'" class="w-3 h-3 fill-current rotate-90 flex-shrink-0" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
@@ -399,10 +466,35 @@
                             $formattedHtml
                         );
                         $formattedHtml = preg_replace(
-                            '/(https?:\/\/[^\s<]+)/i',
+                            '/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/i',
+                            '<a href="$2" target="_blank" rel="noopener" class="text-[#1b6ac9] underline hover:text-[#124b8f] break-all">$1</a>',
+                            $formattedHtml
+                        );
+                        $formattedHtml = preg_replace(
+                            '/(?<!["\'>])(https?:\/\/[^\s<]+)/i',
                             '<a href="$1" target="_blank" rel="noopener" class="text-[#1b6ac9] underline hover:text-[#124b8f] break-all">$1</a>',
                             $formattedHtml
                         );
+                        // Markdown Rich Text Formatting (**bold**, *italic*, ~~strike~~, `code`)
+                        $formattedHtml = preg_replace('/\*\*(.+?)\*\*/s', '<strong class="font-bold">$1</strong>', $formattedHtml);
+                        $formattedHtml = preg_replace('/(?<!\*)\*([^\*\n]+)\*(?!\*)/', '<em class="italic">$1</em>', $formattedHtml);
+                        $formattedHtml = preg_replace('/~~(.+?)~~/s', '<del class="line-through">$1</del>', $formattedHtml);
+                        $formattedHtml = preg_replace('/`([^`\n]+)`/', '<code class="px-1.5 py-0.5 rounded bg-black/[0.06] font-mono text-[13px]">$1</code>', $formattedHtml);
+
+                        // Detect Voice Note (either text 'Voice Note (0:06)' or audio attachment)
+                        $isVoiceNote = false;
+                        $voiceDurationStr = '0:06';
+                        $voiceDurationSecs = 6;
+                        $voiceAudioUrl = null;
+                        if (preg_match('/Voice Note\s*\((\d+):(\d+)\)/i', $rawContent, $vm)) {
+                            $isVoiceNote = true;
+                            $voiceDurationStr = $vm[1] . ':' . $vm[2];
+                            $voiceDurationSecs = max(1, ((int) $vm[1] * 60) + (int) $vm[2]);
+                        }
+                        if (preg_match('/\[Attachment:\s*([^\]]+\.(?:webm|wav|mp3|ogg|m4a))\]/i', $rawContent, $am)) {
+                            $isVoiceNote = true;
+                            $voiceAudioUrl = '/uploads/campfire/' . trim($am[1]);
+                        }
 
                         $imageFile = null;
                         if (preg_match('/\[Attachment:\s*([^\]]+\.(?:png|jpg|jpeg|gif|webp|pdf))\]/i', $rawContent, $m)) {
@@ -488,8 +580,27 @@
 
                     @if($isMe)
                         <!-- Outgoing Message (Right-Aligned Light Blue Basecamp Bubble) -->
-                        <div class="flex items-start justify-end gap-2.5 group/row">
-                            <span class="opacity-0 group-hover/row:opacity-100 transition-opacity text-[#1d2d35] font-bold tracking-widest text-[12px] self-center mr-1 select-none cursor-pointer">•••</span>
+                        <div x-show="!deletedMsgIds.includes({{ $msg->id }})" class="flex items-start justify-end gap-2.5 group/row relative">
+                            <div class="relative self-center mr-1" @click.outside="if (openMsgMenuId === {{ $msg->id }}) openMsgMenuId = null">
+                                <button type="button"
+                                        @click="openMsgMenuId = (openMsgMenuId === {{ $msg->id }} ? null : {{ $msg->id }})"
+                                        :class="openMsgMenuId === {{ $msg->id }} ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'"
+                                        class="transition-opacity text-[#1d2d35] font-bold tracking-widest text-[12px] px-1.5 py-0.5 rounded hover:bg-black/[0.05] select-none cursor-pointer">•••</button>
+                                <div x-show="openMsgMenuId === {{ $msg->id }}"
+                                     x-cloak
+                                     class="absolute right-0 top-6 w-[140px] rounded-[7px] border border-[#e5e2dc] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.14)] py-1 text-[13px] text-[#1d2d35] z-40">
+                                    <button type="button"
+                                            @click="if (navigator.clipboard) navigator.clipboard.writeText(@js($rawContent)); openMsgMenuId = null; copiedToast = true; setTimeout(() => copiedToast = false, 2000)"
+                                            class="w-full px-3 py-1.5 text-left hover:bg-[#f6f4f0] cursor-pointer">
+                                        Copy text
+                                    </button>
+                                    <button type="button"
+                                            @click="deleteChatMessage({{ $msg->id }})"
+                                            class="w-full px-3 py-1.5 text-left text-[#c0392b] hover:bg-[#fff2f0] font-medium cursor-pointer">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
                             <div class="max-w-[75%] bg-[#e6f2fa] rounded-[10px] px-4 py-2 text-[#1d2d35]">
                                 @if(!$sameSenderAsPrev)
                                     <div class="flex items-center justify-end gap-1.5 mb-0.5 text-[12px]">
@@ -497,7 +608,26 @@
                                         <span class="font-bold text-[#1d2d35]">Me</span>
                                     </div>
                                 @endif
-                                @if($imageUrl)
+                                @if($isVoiceNote)
+                                    <div class="inline-flex items-center gap-3 py-1 min-w-[215px]">
+                                        <button type="button"
+                                                @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, {{ $voiceAudioUrl ? "'" . $voiceAudioUrl . "'" : 'null' }})"
+                                                class="w-8 h-8 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white flex items-center justify-center flex-shrink-0 shadow-xs cursor-pointer transition-colors">
+                                            <svg x-show="playingAudioId !== {{ $msg->id }}" class="w-3.5 h-3.5 fill-current translate-x-[1px]" viewBox="0 0 20 20"><polygon points="5,3 17,10 5,17"/></svg>
+                                            <svg x-show="playingAudioId === {{ $msg->id }}" x-cloak class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
+                                        </button>
+                                        <div class="flex-1 min-w-[115px]">
+                                            <div class="h-1.5 w-full rounded-full bg-[#c5dff2] overflow-hidden">
+                                                <div class="h-full bg-[#1b6ac9] rounded-full transition-all duration-300"
+                                                     :style="'width: ' + (playingAudioId === {{ $msg->id }} ? Math.min(100, Math.round(((audioProgress[{{ $msg->id }}] || 0) / {{ $voiceDurationSecs }}) * 100)) : 0) + '%'"></div>
+                                            </div>
+                                            <div class="mt-1 flex items-center justify-between text-[11px] text-[#536471] font-medium">
+                                                <span>Voice Note</span>
+                                                <span x-text="playingAudioId === {{ $msg->id }} ? ('0:' + String(audioProgress[{{ $msg->id }}] || 0).padStart(2, '0') + ' / {{ $voiceDurationStr }}') : '{{ $voiceDurationStr }}'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @elseif($imageUrl)
                                     <div class="inline-block text-center relative group/img">
                                         <img src="{{ $imageUrl }}"
                                              alt="{{ $displayFileName }}"
@@ -533,7 +663,7 @@
                         </div>
                     @else
                         <!-- Incoming Message (Left-Aligned Warm Cream Basecamp Card/Bubble) -->
-                        <div class="flex items-start gap-2.5">
+                        <div x-show="!deletedMsgIds.includes({{ $msg->id }})" class="flex items-start gap-2.5">
                             <!-- Left 34px Avatar Column -->
                             <div class="w-[34px] flex-shrink-0 mt-0.5">
                                 @if(!$sameSenderAsPrev)
@@ -557,7 +687,57 @@
                                 @endif
                             </div>
 
-                            @if($imageUrl)
+                            @if($isVoiceNote)
+                                <!-- Playable Incoming Voice Note Bubble + Right ••• -->
+                                <div class="flex items-center gap-3 max-w-[78%] group/row relative">
+                                    <div class="bg-[#faf6f0] rounded-[10px] px-4 py-2.5 text-[#1d2d35]">
+                                        @if(!$sameSenderAsPrev)
+                                            <div class="flex items-baseline gap-1.5 mb-1 text-[12.5px]">
+                                                <span class="font-bold text-[#1d2d35]">{{ $senderName }}</span>
+                                                <span class="text-[#6d6a65] text-[11.5px]">{{ strtolower($msg->created_at->format('g:ia')) }}</span>
+                                            </div>
+                                        @endif
+                                        <div class="inline-flex items-center gap-3 py-1 min-w-[215px]">
+                                            <button type="button"
+                                                    @click="toggleVoicePlayback({{ $msg->id }}, {{ $voiceDurationSecs }}, {{ $voiceAudioUrl ? "'" . $voiceAudioUrl . "'" : 'null' }})"
+                                                    class="w-8 h-8 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white flex items-center justify-center flex-shrink-0 shadow-xs cursor-pointer transition-colors">
+                                                <svg x-show="playingAudioId !== {{ $msg->id }}" class="w-3.5 h-3.5 fill-current translate-x-[1px]" viewBox="0 0 20 20"><polygon points="5,3 17,10 5,17"/></svg>
+                                                <svg x-show="playingAudioId === {{ $msg->id }}" x-cloak class="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20"><rect x="4" y="3" width="4" height="14" rx="1"/><rect x="12" y="3" width="4" height="14" rx="1"/></svg>
+                                            </button>
+                                            <div class="flex-1 min-w-[115px]">
+                                                <div class="h-1.5 w-full rounded-full bg-[#e5dfd5] overflow-hidden">
+                                                    <div class="h-full bg-[#1b6ac9] rounded-full transition-all duration-300"
+                                                         :style="'width: ' + (playingAudioId === {{ $msg->id }} ? Math.min(100, Math.round(((audioProgress[{{ $msg->id }}] || 0) / {{ $voiceDurationSecs }}) * 100)) : 0) + '%'"></div>
+                                                </div>
+                                                <div class="mt-1 flex items-center justify-between text-[11px] text-[#6d6a65] font-medium">
+                                                    <span>Voice Note</span>
+                                                    <span x-text="playingAudioId === {{ $msg->id }} ? ('0:' + String(audioProgress[{{ $msg->id }}] || 0).padStart(2, '0') + ' / {{ $voiceDurationStr }}') : '{{ $voiceDurationStr }}'"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="relative self-center" @click.outside="if (openMsgMenuId === {{ $msg->id }}) openMsgMenuId = null">
+                                        <button type="button"
+                                                @click="openMsgMenuId = (openMsgMenuId === {{ $msg->id }} ? null : {{ $msg->id }})"
+                                                :class="openMsgMenuId === {{ $msg->id }} ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'"
+                                                class="transition-opacity text-[#1d2d35] font-bold tracking-widest text-[13px] px-1.5 py-0.5 rounded hover:bg-black/[0.05] select-none cursor-pointer">•••</button>
+                                        <div x-show="openMsgMenuId === {{ $msg->id }}"
+                                             x-cloak
+                                             class="absolute left-0 top-6 w-[140px] rounded-[7px] border border-[#e5e2dc] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.14)] py-1 text-[13px] text-[#1d2d35] z-40">
+                                            <button type="button"
+                                                    @click="if (navigator.clipboard) navigator.clipboard.writeText(@js($rawContent)); openMsgMenuId = null; copiedToast = true; setTimeout(() => copiedToast = false, 2000)"
+                                                    class="w-full px-3 py-1.5 text-left hover:bg-[#f6f4f0] cursor-pointer">
+                                                Copy text
+                                            </button>
+                                            <button type="button"
+                                                    @click="deleteChatMessage({{ $msg->id }})"
+                                                    class="w-full px-3 py-1.5 text-left text-[#c0392b] hover:bg-[#fff2f0] font-medium cursor-pointer">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            @elseif($imageUrl)
                                 <!-- Standalone Warm Beige Image Card + Top-Right Hover Action Pill -->
                                 <div class="flex items-center gap-3 group/row">
                                     <div class="{{ ($isMgmtShield || $isMgmtBanner) ? 'bg-[#fcf8f4] p-3' : 'bg-[#faf6f0] p-2.5' }} rounded-[6px] inline-block text-center relative group/img">
@@ -609,7 +789,7 @@
                                 </div>
                             @else
                                 <!-- Text Bubble + Right ••• -->
-                                <div class="flex items-center gap-3 max-w-[78%] group/row">
+                                <div class="flex items-center gap-3 max-w-[78%] group/row relative">
                                     <div class="{{ $mentionsManjot ? 'bg-[#f8ead5]' : 'bg-[#faf6f0]' }} rounded-[10px] px-4 py-2.5 text-[#1d2d35]">
                                         @if(!$sameSenderAsPrev)
                                             <div class="flex items-baseline gap-1.5 mb-1 text-[12.5px]">
@@ -619,7 +799,26 @@
                                         @endif
                                         <div class="text-[14.5px] leading-[1.45] whitespace-pre-line break-words">{!! $formattedHtml !!}</div>
                                     </div>
-                                    <span class="opacity-0 group-hover/row:opacity-100 transition-opacity text-[#1d2d35] font-bold tracking-widest text-[13px] select-none cursor-pointer">•••</span>
+                                    <div class="relative self-center" @click.outside="if (openMsgMenuId === {{ $msg->id }}) openMsgMenuId = null">
+                                        <button type="button"
+                                                @click="openMsgMenuId = (openMsgMenuId === {{ $msg->id }} ? null : {{ $msg->id }})"
+                                                :class="openMsgMenuId === {{ $msg->id }} ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100'"
+                                                class="transition-opacity text-[#1d2d35] font-bold tracking-widest text-[13px] px-1.5 py-0.5 rounded hover:bg-black/[0.05] select-none cursor-pointer">•••</button>
+                                        <div x-show="openMsgMenuId === {{ $msg->id }}"
+                                             x-cloak
+                                             class="absolute left-0 top-6 w-[140px] rounded-[7px] border border-[#e5e2dc] bg-white shadow-[0_6px_18px_rgba(0,0,0,0.14)] py-1 text-[13px] text-[#1d2d35] z-40">
+                                            <button type="button"
+                                                    @click="if (navigator.clipboard) navigator.clipboard.writeText(@js($rawContent)); openMsgMenuId = null; copiedToast = true; setTimeout(() => copiedToast = false, 2000)"
+                                                    class="w-full px-3 py-1.5 text-left hover:bg-[#f6f4f0] cursor-pointer">
+                                                Copy text
+                                            </button>
+                                            <button type="button"
+                                                    @click="deleteChatMessage({{ $msg->id }})"
+                                                    class="w-full px-3 py-1.5 text-left text-[#c0392b] hover:bg-[#fff2f0] font-medium cursor-pointer">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             @endif
                         </div>
@@ -662,22 +861,67 @@
                         this.recordSeconds = 0;
                         clearInterval(this.recordTimer);
                         this.recordTimer = setInterval(() => { this.recordSeconds++; }, 1000);
+                        window._campfireAudioChunks = [];
+                        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                            navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                                window._campfireMediaStream = stream;
+                                const mr = new MediaRecorder(stream);
+                                window._campfireMediaRecorder = mr;
+                                mr.ondataavailable = (ev) => {
+                                    if (ev.data && ev.data.size > 0) window._campfireAudioChunks.push(ev.data);
+                                };
+                                mr.start();
+                            }).catch(() => {});
+                        }
                     },
                     stopAudioRecord(attach) {
                         clearInterval(this.recordTimer);
                         this.recordingAudio = false;
-                        if (attach) {
+                        const durSecs = Math.max(1, this.recordSeconds);
+                        const mins = Math.floor(durSecs / 60);
+                        const secs = String(durSecs % 60).padStart(2, '0');
+                        const finishSend = (blob) => {
                             const inp = this.$refs.chatTextInput;
+                            const form = this.$refs.campfireForm;
+                            if (blob && this.$refs.campfireFileInput) {
+                                try {
+                                    const file = new File([blob], 'voice_note_' + Date.now() + '.webm', { type: 'audio/webm' });
+                                    const dt = new DataTransfer();
+                                    dt.items.add(file);
+                                    this.$refs.campfireFileInput.files = dt.files;
+                                } catch (e) {}
+                            }
                             if (inp) {
-                                const mins = Math.floor(this.recordSeconds / 60);
-                                const secs = String(this.recordSeconds % 60).padStart(2, '0');
                                 inp.value = (inp.value ? inp.value + ' ' : '') + '🎙️ Voice Note (' + mins + ':' + secs + ')';
-                                inp.focus();
+                            }
+                            if (form) {
+                                form.submit();
+                            }
+                        };
+                        if (window._campfireMediaRecorder && window._campfireMediaRecorder.state !== 'inactive') {
+                            window._campfireMediaRecorder.onstop = () => {
+                                if (window._campfireMediaStream) {
+                                    window._campfireMediaStream.getTracks().forEach(t => t.stop());
+                                }
+                                if (attach) {
+                                    const blob = window._campfireAudioChunks && window._campfireAudioChunks.length
+                                        ? new Blob(window._campfireAudioChunks, { type: 'audio/webm' })
+                                        : null;
+                                    finishSend(blob);
+                                }
+                            };
+                            window._campfireMediaRecorder.stop();
+                        } else {
+                            if (window._campfireMediaStream) {
+                                window._campfireMediaStream.getTracks().forEach(t => t.stop());
+                            }
+                            if (attach) {
+                                finishSend(null);
                             }
                         }
                     }
                  }">
-                <form action="{{ route('projects.chat.store', $project->id) }}" method="POST" enctype="multipart/form-data" class="relative">
+                <form x-ref="campfireForm" action="{{ route('projects.chat.store', $project->id) }}" method="POST" enctype="multipart/form-data" class="relative">
                     @csrf
                     <input type="file"
                            name="attachment"
@@ -705,25 +949,28 @@
                             <span class="font-mono text-[#6d6a65]" x-text="Math.floor(recordSeconds / 60) + ':' + String(recordSeconds % 60).padStart(2, '0')"></span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button type="button" @click="stopAudioRecord(true)" class="px-3 py-1 rounded-full bg-[#199849] hover:bg-[#147a3a] text-white font-bold text-[12px] cursor-pointer">Attach clip</button>
+                            <button type="button" @click="stopAudioRecord(true)" class="px-3 py-1 rounded-full bg-[#199849] hover:bg-[#147a3a] text-white font-bold text-[12px] cursor-pointer">Send voice note</button>
                             <button type="button" @click="stopAudioRecord(false)" class="px-2.5 py-1 rounded-full border border-[#d6d2c9] bg-white text-[#6d6a65] text-[12px] cursor-pointer">Cancel</button>
                         </div>
                     </div>
 
                     <!-- Expandable Basecamp Rich Formatting Toolbar (Toggled by 'A' Button) -->
-                    <div x-show="formatBarOpen" x-cloak class="mb-1.5 px-2.5 py-1.5 rounded-t-[7px] border border-[#d6d2c9] bg-[#fbfaf8] flex items-center gap-1 text-[#1d2d35]">
-                        <button type="button" @click="applyFormat('**', '**')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] font-extrabold text-[13px] cursor-pointer" title="Bold">B</button>
-                        <button type="button" @click="applyFormat('*', '*')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] italic font-serif text-[13.5px] cursor-pointer" title="Italic">I</button>
-                        <button type="button" @click="applyFormat('~~', '~~')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] line-through text-[13px] cursor-pointer" title="Strikethrough">S</button>
-                        <span class="w-[1px] h-4 bg-[#d6d2c9] mx-1"></span>
-                        <button type="button" @click="applyFormat('[', '](https://)')" class="p-1 rounded hover:bg-[#ece9e2] cursor-pointer" title="Link">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-                        </button>
-                        <button type="button" @click="applyFormat('> ', '')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] font-serif font-bold text-[14px] cursor-pointer" title="Quote">”</button>
-                        <button type="button" @click="applyFormat('`', '`')" class="px-1.5 py-0.5 rounded hover:bg-[#ece9e2] font-mono text-[12px] font-bold cursor-pointer" title="Code">&lt;&gt;</button>
-                        <button type="button" @click="applyFormat('• ', '')" class="p-1 rounded hover:bg-[#ece9e2] cursor-pointer" title="Bulleted list">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                        </button>
+                    <div x-show="formatBarOpen" x-cloak class="mb-1.5 px-2.5 py-1.5 rounded-t-[7px] border border-[#d6d2c9] bg-[#fbfaf8] flex items-center justify-between gap-1 text-[#1d2d35]">
+                        <div class="flex items-center gap-1">
+                            <button type="button" @click="applyFormat('**', '**')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] font-extrabold text-[13px] cursor-pointer" title="Bold">B</button>
+                            <button type="button" @click="applyFormat('*', '*')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] italic font-serif text-[13.5px] cursor-pointer" title="Italic">I</button>
+                            <button type="button" @click="applyFormat('~~', '~~')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] line-through text-[13px] cursor-pointer" title="Strikethrough">S</button>
+                            <span class="w-[1px] h-4 bg-[#d6d2c9] mx-1"></span>
+                            <button type="button" @click="applyFormat('[', '](https://)')" class="p-1 rounded hover:bg-[#ece9e2] cursor-pointer" title="Link">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                            </button>
+                            <button type="button" @click="applyFormat('> ', '')" class="px-2 py-0.5 rounded hover:bg-[#ece9e2] font-serif font-bold text-[14px] cursor-pointer" title="Quote">”</button>
+                            <button type="button" @click="applyFormat('`', '`')" class="px-1.5 py-0.5 rounded hover:bg-[#ece9e2] font-mono text-[12px] font-bold cursor-pointer" title="Code">&lt;&gt;</button>
+                            <button type="button" @click="applyFormat('• ', '')" class="p-1 rounded hover:bg-[#ece9e2] cursor-pointer" title="Bulleted list">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                            </button>
+                        </div>
+                        <button type="submit" class="px-3 py-1 rounded-full bg-[#199849] hover:bg-[#147a3a] text-white font-bold text-[12px] cursor-pointer">Send</button>
                     </div>
 
                     <div class="flex items-center border border-[#d6d2c9] focus-within:border-[1.5px] focus-within:border-[#1b6ac9] rounded-[7px] bg-white px-4 py-2.5">
@@ -1036,7 +1283,7 @@
                                    value="client"
                                    x-model="draftVisibility"
                                    class="w-4 h-4 accent-[#1d2d35]">
-                            <span :class="draftVisibility === 'client' ? 'bg-[#cfe6f7]' : 'bg-transparent'"
+                            <span :class="draftVisibility === 'client' ? 'bg-[#fbf0c4]' : 'bg-transparent'"
                                   class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[13.5px] font-medium text-[#1d2d35] transition-colors">
                                 <svg class="w-3.5 h-3.5 fill-current text-[#1d2d35]" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
                                 <span>Allow the client to see this too</span>
@@ -1046,7 +1293,7 @@
 
                     <div class="mt-5 flex items-center gap-2">
                         <button type="button"
-                                @click="chatVisibility = draftVisibility; switchView('chat')"
+                                @click="chatVisibility = draftVisibility; localStorage.setItem('bc_chat_visibility_{{ $project->id }}', draftVisibility); switchView('chat')"
                                 class="px-4 py-2 rounded-[6px] bg-[#1b6ac9] hover:bg-[#1557a8] text-white font-semibold text-[14px] transition-colors cursor-pointer">
                             Save
                         </button>

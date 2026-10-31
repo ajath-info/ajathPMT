@@ -572,53 +572,6 @@ html.bc-theme-dark .bc-client-switch-on {
                                                 :class="!m.notifications ? 'text-[#8c8881]' : 'text-[#6d6a65]'"
                                                 x-text="m.notifications ? 'Notifications on' : 'Notifications off'"></button>
 
-                                        <template x-if="!m.isSelf && (m.isPending || m.roleBadge === 'Pending' || !m.roleBadge)">
-                                            <span>
-                                                <span>&bull;</span>
-                                                <button type="button"
-                                                        @click="openEditMemberInvite(m)"
-                                                        class="underline text-[#1b6ac9] hover:opacity-80 cursor-pointer ml-0.5">
-                                                    Add to company / Edit email
-                                                </button>
-                                            </span>
-                                        </template>
-
-                                        <!-- Inline Editor for Email & Company (e.g. Ajath Infotech Pvt Ltd) -->
-                                        <div x-show="editingEmailMemberId === m.id"
-                                             x-cloak
-                                             class="w-full mt-2 p-3 rounded-[8px] border border-[#d8d4cc] bg-[#f9f8f6] text-[#1d2d35] space-y-2 shadow-xs">
-                                            <div class="text-[12px] font-bold text-[#1d2d35]">Send invitation &amp; assign company for <span x-text="m.name"></span></div>
-                                            <div>
-                                                <label class="block text-[11px] font-semibold text-[#6d6a65] mb-0.5">Email address</label>
-                                                <input type="email"
-                                                       x-model="editingEmailValue"
-                                                       placeholder="name@company.com"
-                                                       class="w-full px-2.5 py-1.5 rounded-[5px] border border-[#d4d0c8] bg-white text-[12.5px] text-[#1d2d35] focus:outline-none">
-                                            </div>
-                                            <div>
-                                                <label class="block text-[11px] font-semibold text-[#6d6a65] mb-0.5">Company</label>
-                                                <select x-model="editingCompanyValue"
-                                                        class="w-full px-2.5 py-1.5 rounded-[5px] border border-[#d4d0c8] bg-white text-[12.5px] text-[#1d2d35] focus:outline-none">
-                                                    <option value="Ajath Infotech Pvt Ltd">Ajath Infotech Pvt Ltd</option>
-                                                    <template x-for="comp in companies" :key="'opt-' + comp.name">
-                                                        <option :value="comp.name" x-show="comp.name !== 'Ajath Infotech Pvt Ltd'" x-text="comp.name"></option>
-                                                    </template>
-                                                </select>
-                                            </div>
-                                            <div class="flex items-center justify-end gap-2 pt-1">
-                                                <button type="button"
-                                                        @click="editingEmailMemberId = null"
-                                                        class="px-2.5 py-1 rounded-[5px] border border-[#d4d0c8] text-[12px] text-[#1d2d35] cursor-pointer">
-                                                    Cancel
-                                                </button>
-                                                <button type="button"
-                                                        @click="saveMemberInviteAndSend(m)"
-                                                        class="px-3 py-1 rounded-[5px] bg-[#2da562] hover:bg-[#258c52] text-white font-semibold text-[12px] cursor-pointer">
-                                                    Save &amp; Send Email
-                                                </button>
-                                            </div>
-                                        </div>
-
                                         <!-- Inline Basecamp Notification Settings Popover for Member -->
                                         <div :id="'notify-pop-' + m.id"
                                              x-show="openNotifyId === m.id"
@@ -668,6 +621,19 @@ html.bc-theme-dark .bc-client-switch-on {
                             Invite more people to this project
                         </h2>
 
+                        <!-- Queued Email Invites List (Exact Match to media_1793436787906_93d6c624.jpg) -->
+                        <template x-for="(inv, idx) in pendingInvites" :key="inv.email + '-' + idx">
+                            <div class="pb-2 mb-3 border-b border-dotted border-[#8c969e] flex items-center justify-between text-[14.5px] text-[#1d2d35]">
+                                <span x-text="inv.label || inv.email"></span>
+                                <button type="button"
+                                        @click="removePendingInvite(idx)"
+                                        class="text-[#6d6a65] hover:text-[#1d2d35] text-[15px] leading-none px-1 cursor-pointer"
+                                        title="Remove">
+                                    &times;
+                                </button>
+                            </div>
+                        </template>
+
                         <!-- Autocomplete Input for Platform Users -->
                         <div class="relative" @click.outside="dropdownOpen = false">
                             <input type="text"
@@ -714,92 +680,96 @@ html.bc-theme-dark .bc-client-switch-on {
                                     <button type="button"
                                             @click="addTypedPerson(false)"
                                             class="w-full px-2.5 py-2 rounded-[6px] text-left text-[13px] font-semibold text-[#1b6ac9] hover:bg-[#f6f4f0] cursor-pointer">
-                                        + Send email invite to &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo;
+                                        + Invite &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo; to this project
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Send email invites button when typing a new email/name -->
-                        <div x-show="searchQuery.trim().length > 0" x-cloak class="mt-3">
+                        <!-- "Or pick people from a company..." Link -->
+                        <div class="mt-3.5">
                             <button type="button"
-                                    @click="addTypedPerson(false)"
-                                    class="px-4 py-1.5 rounded-[6px] bg-[#198744] hover:bg-[#146c36] text-white font-semibold text-[13.5px] transition-colors cursor-pointer">
-                                Send email invites
-                            </button>
-                        </div>
-
-                        <!-- "Or pick people from a company..." + "Invite a new person to Ajath Infotech Pvt Ltd" Links -->
-                        <div class="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                            <button type="button"
-                                    @click="companyPickerOpen = !companyPickerOpen; dropdownOpen = false; newPersonFormOpen = false"
+                                    @click="companyPickerOpen = !companyPickerOpen; dropdownOpen = false"
                                     class="text-[13.5px] text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
                                 Or pick people from a company...
                             </button>
-                            <span class="text-[#8c8881] text-[12px]">&bull;</span>
-                            <button type="button"
-                                    @click="openNewPersonForm(searchQuery, false)"
-                                    class="text-[13.5px] text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
-                                + Add new person to Ajath Infotech Pvt Ltd...
-                            </button>
                         </div>
 
-                        <!-- Inline Basecamp "Add a new person to company & project" Form -->
-                        <div x-show="newPersonFormOpen"
+                        <!-- Basecamp "Add an optional welcome message" + "What happens next?" Section (Exact Match to media_1793436787906_93d6c624.jpg) -->
+                        <div x-show="pendingInvites.length > 0"
                              x-cloak
-                             class="mt-3 rounded-[8px] border border-[#d8d4cc] bg-[#f9f8f6] p-4 space-y-3 shadow-sm">
-                            <div class="flex items-center justify-between border-b border-[#ece9e2] pb-2">
-                                <span class="text-[13.5px] font-bold text-[#1d2d35]">Invite a new person &amp; send email</span>
-                                <button type="button" @click="newPersonFormOpen = false" class="text-[12px] text-[#6d6a65] hover:text-[#1d2d35] cursor-pointer">✕</button>
+                             class="mt-6">
+                            <h3 class="text-[16.5px] font-bold text-[#1d2d35] mb-2.5">
+                                Add an optional welcome message
+                            </h3>
+
+                            <!-- Rich Text Editor Box -->
+                            <div class="rounded-[8px] border border-[#d8d4cc] bg-white overflow-hidden">
+                                <!-- Formatting Toolbar -->
+                                <div class="px-3 py-2 border-b border-[#ece9e2] flex items-center justify-between text-[#1d2d35] select-none">
+                                    <div class="flex flex-wrap items-center gap-2.5 text-[13.5px]">
+                                        <button type="button" class="font-extrabold hover:opacity-75 cursor-pointer" title="Bold">B</button>
+                                        <button type="button" class="italic font-serif hover:opacity-75 cursor-pointer" title="Italic">I</button>
+                                        <button type="button" class="line-through font-semibold hover:opacity-75 cursor-pointer" title="Strikethrough">S</button>
+                                        <button type="button" class="inline-flex items-center gap-0.5 font-bold text-[12.5px] hover:opacity-75 cursor-pointer" title="Heading">
+                                            <span>Tt</span>
+                                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                        </button>
+                                        <button type="button" class="inline-flex items-center gap-0.5 hover:opacity-75 cursor-pointer" title="Color">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/>
+                                            </svg>
+                                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                                        </button>
+                                        <button type="button" class="hover:opacity-75 cursor-pointer" title="Link">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                            </svg>
+                                        </button>
+                                        <button type="button" class="font-serif font-black text-[15px] leading-none hover:opacity-75 cursor-pointer" title="Quote">&rdquo;</button>
+                                        <button type="button" class="font-mono text-[11.5px] font-bold hover:opacity-75 cursor-pointer" title="Code">&lt;&gt;</button>
+                                        <button type="button" class="hover:opacity-75 cursor-pointer" title="Bulleted list">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>
+                                            </svg>
+                                        </button>
+                                        <button type="button" class="hover:opacity-75 cursor-pointer" title="Numbered list">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 6h11M10 12h11M10 18h11M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <button type="button" class="text-[#1d2d35] hover:opacity-75 cursor-pointer">
+                                        <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- Welcome Message Textarea -->
+                                <textarea x-model="welcomeMessage"
+                                          rows="4"
+                                          class="w-full p-3.5 text-[14px] text-[#1d2d35] leading-relaxed border-0 focus:outline-none focus:ring-0 resize-none"></textarea>
                             </div>
 
-                            <div class="space-y-2.5">
-                                <div>
-                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Full Name</label>
-                                    <input type="text"
-                                           x-model="newPersonName"
-                                           placeholder="e.g. Shachish Sneh"
-                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
-                                </div>
+                            <!-- What happens next? Paragraph -->
+                            <p class="mt-4 text-[13.5px] text-[#1d2d35] leading-[1.45]">
+                                <strong class="font-bold">What happens next?</strong>
+                                Anyone you add by email will receive an invite with instructions to join the project. They&rsquo;ll be added as outside collaborators (you can change this on the next step) and they&rsquo;ll be able to see everything posted on the project so far.
+                            </p>
 
-                                <div>
-                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Email Address (invitation link will be sent here)</label>
-                                    <input type="email"
-                                           x-model="newPersonEmail"
-                                           placeholder="name@ajath.com"
-                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Company</label>
-                                    <select x-model="newPersonCompany"
-                                            class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
-                                        <option value="Ajath Infotech Pvt Ltd">Ajath Infotech Pvt Ltd (Our Company)</option>
-                                        <template x-for="comp in companies" :key="'newcomp-' + comp.name">
-                                            <option :value="comp.name" x-show="comp.name !== 'Ajath Infotech Pvt Ltd'" x-text="comp.name"></option>
-                                        </template>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Title / Role</label>
-                                    <input type="text"
-                                           x-model="newPersonTitle"
-                                           placeholder="Team Member"
-                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
-                                </div>
-                            </div>
-
-                            <div class="pt-1 flex items-center justify-end gap-2">
+                            <!-- Send invites | Never mind Buttons -->
+                            <div class="mt-4 flex items-center gap-2">
                                 <button type="button"
-                                        @click="newPersonFormOpen = false"
-                                        class="px-3 py-1.5 rounded-[6px] border border-[#d6d2c9] text-[12.5px] text-[#1d2d35] cursor-pointer">
-                                    Cancel
+                                        @click="sendQueuedInvites()"
+                                        :disabled="sendingInvites"
+                                        class="px-4 py-2 rounded-[6px] bg-[#1d6ce0] hover:bg-[#1557b8] text-white font-semibold text-[14px] transition-colors cursor-pointer">
+                                    <span x-text="sendingInvites ? 'Sending invites...' : 'Send invites'">Send invites</span>
                                 </button>
                                 <button type="button"
-                                        @click="submitNewPersonInvite()"
-                                        class="px-3.5 py-1.5 rounded-[6px] bg-[#2da562] hover:bg-[#258c52] text-white font-semibold text-[12.5px] cursor-pointer">
-                                    Add to project &amp; send email
+                                        @click="pendingInvites = []; searchQuery = ''"
+                                        class="px-4 py-2 rounded-[6px] border border-[#bfd7f6] bg-white hover:bg-[#f5f9ff] text-[#1d6ce0] font-medium text-[14px] transition-colors cursor-pointer">
+                                    Never mind
                                 </button>
                             </div>
                         </div>

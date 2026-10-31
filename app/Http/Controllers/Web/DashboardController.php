@@ -507,7 +507,37 @@ class DashboardController extends Controller
                 ];
             });
 
+        // 8. Project Member Invites / Additions (Matching media_1793437090482_c68a1f5c.jpg)
+        $cachedInvites = \Illuminate\Support\Facades\Cache::get('bc_recent_project_invites', []);
+        if (!is_array($cachedInvites)) {
+            $cachedInvites = [];
+        }
+        $recentInviteActivities = collect($cachedInvites)->map(function ($inv) use ($badgeForUser, $formatActivityTime) {
+            $dt = !empty($inv['created_at']) ? \Carbon\Carbon::parse($inv['created_at']) : now();
+            $diffMins = (int) max(1, abs(now()->diffInMinutes($dt)));
+            $timeStr = $diffMins < 60
+                ? ($diffMins . 'm ago')
+                : $formatActivityTime($dt);
+            $actorFull = $inv['actor_full'] ?? 'Manjot Singh';
+            $badge = $badgeForUser($actorFull);
+            $projId = (int) ($inv['project_id'] ?? 26);
+            return (object)[
+                'type' => 'person_added',
+                'author_name' => $inv['actor_name'] ?? 'Manjot S.',
+                'badge' => $badge,
+                'action' => 'added ' . ($inv['added_text'] ?? 'a team member') . ' to the project',
+                'target_title' => '',
+                'target_url' => route('projects.people', $projId),
+                'project_name' => $inv['project_name'] ?? 'Ride My Cars (Edward)',
+                'project_url' => route('projects.show', $projId),
+                'created_at' => $dt,
+                'time_str' => $timeStr,
+                'sort_key' => $dt->toDateTimeString(),
+            ];
+        });
+
         $recentActivities = collect()
+            ->concat($recentInviteActivities)
             ->concat($recentCreatedProjects)
             ->concat($recentTaskEvents)
             ->concat($recentTaskComments)

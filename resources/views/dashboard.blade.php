@@ -380,6 +380,10 @@
                             </span>
                             @elseif($act->type === 'file')
                             <span class="w-3.5 h-3.5 rounded-full bg-[#f5b642] text-white inline-flex items-center justify-center flex-shrink-0 text-[8px]">📄</span>
+                            @elseif($act->type === 'person_added')
+                            <span class="w-3.5 h-3.5 rounded-full bg-[#2da562] text-white inline-flex items-center justify-center flex-shrink-0" title="Person added">
+                                <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"/></svg>
+                            </span>
                             @elseif($act->type === 'task')
                             <span class="w-3.5 h-3.5 rounded-full bg-[#2da562] text-white inline-flex items-center justify-center flex-shrink-0">
                                 <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -422,7 +426,9 @@
                             <span class="font-bold text-[#1d2d35]">{{ $act->author_name }}</span>
                             @endif
                             <span class="text-[#1d2d35]">{{ $act->action }}</span>
-                            @if($act->type === 'project_created')
+                            @if($act->type === 'person_added')
+                                {{-- No underlined target link for person_added --}}
+                            @elseif($act->type === 'project_created')
                             <a href="{{ $act->target_url }}" class="text-[#1d2d35] hover:underline font-normal">{{ $act->target_title }}</a>
                             @else
                             <a href="{{ $act->target_url }}" class="text-[#1b6ac9] underline hover:text-[#124b8f] font-normal">{{ $act->target_title }}</a>

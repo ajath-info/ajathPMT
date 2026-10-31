@@ -36,7 +36,7 @@
 
             <!-- Description Paragraph -->
             <p class="text-[16px] sm:text-[17px] text-[#1d2d35] leading-[1.45] max-w-[630px]">
-                Since this person is new to your Basecamp account, we&rsquo;ve set them as an outside collaborator. If they work at {{ $orgName }}, you can switch them to an employee below:
+                Since this person is new to your Basecamp account, we&rsquo;ve added them as an outside collaborator. If they work at {{ $orgName }}, you can switch them to an employee below:
             </p>
 
             <form method="POST" action="{{ route('projects.invitations.enrollees.update', $project->id) }}">
@@ -136,3 +136,4 @@
     </div>
 </div>
 @endsection
+
