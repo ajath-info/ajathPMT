@@ -19,6 +19,7 @@ class Task extends Model
         'due_date',
         'assigned_to',
         'created_by',
+        'completed_by',
         'position',
     ];
 
@@ -35,6 +36,16 @@ class Task extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function completer()
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(TaskComment::class)->oldest();
     }
 }
 

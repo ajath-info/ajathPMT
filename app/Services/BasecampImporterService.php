@@ -257,14 +257,15 @@ class BasecampImporterService
                                                 $assigneeId = $userMap[$td['assignees'][0]['id']] ?? null;
                                             }
 
-                                            Task::updateOrCreate(
+                                            $taskRecord = Task::updateOrCreate(
                                                 [
                                                     'project_id' => $proj->id,
                                                     'basecamp_id' => (string)$td['id'],
                                                 ],
                                                 [
-                                                    'title' => $td['content'] ?? 'Untitled To-do',
-                                                    'description' => strip_tags($td['description'] ?? ''),
+                                                    'list_name' => $tlist['title'] ?? ($tlist['name'] ?? 'To-dos'),
+                                                    'title' => $td['content'] ?? ($td['title'] ?? 'Untitled To-do'),
+                                                    'description' => trim(strip_tags($td['description'] ?? ($td['notes'] ?? ''))) ?: null,
                                                     'status' => ($td['completed'] ?? false) ? 'DONE' : 'TODO',
                                                     'due_date' => $td['due_on'] ?? null,
                                                     'priority' => 'MEDIUM',

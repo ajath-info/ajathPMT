@@ -1,152 +1,134 @@
 @extends('layouts.app')
 
-@section('title', 'My Drafts - Ajath Workspace')
+@section('title', 'Your Drafts')
 
 @section('content')
-<div x-data="{ 
-    filter: 'all',
-    createModal: false 
-}" class="max-w-4xl mx-auto space-y-6">
+<div class="max-w-[780px] mx-auto px-4 sm:px-6 pb-20 pt-2" x-data="{
+    selectedDraft: null,
+    postedNotice: false,
+    drafts: [
+        { id: 5245770226, filename: 'EFB10105-13F6-4F33-9D93-F969774B0EDB.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '4.91 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' },
+        { id: 5245769812, filename: '7B63E802-AC1C-4992-BE39-1A06A82BBA8D.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '3.84 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' },
+        { id: 5245768338, filename: '4B607FA8-0222-4D54-A7C4-F78D487BA593.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '4.12 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' },
+        { id: 5245767904, filename: '0FDEFE76-4515-49C9-87B3-4F98F5423301.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '3.65 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' },
+        { id: 5245767119, filename: 'A7000580-6B8B-4E68-8E04-ACA3F8A1ECDD.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '4.48 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' },
+        { id: 5245766401, filename: '63CC1F81-C630-41EC-B65A-31106DED9C1C.jpeg', project: 'Ajath Infotech Pvt Ltd HQ', updated: 'Aug 19, 2022', size: '3.92 MB', image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1080&q=80' }
+    ],
+    removeDraft(index) {
+        this.drafts.splice(index, 1);
+    }
+}">
+    <div class="bc-sheet overflow-hidden min-h-[640px]">
 
-    <!-- Top Breadcrumb & Title -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('home') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors">
-                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Home
-                </a>
-                <span class="text-slate-300">/</span>
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">My Drafts</span>
-            </div>
-            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2.5">
-                <i data-lucide="file-edit" class="w-7 h-7 text-indigo-600"></i>
-                <span>My Drafts</span>
-            </h1>
-            <p class="text-xs text-slate-500 mt-1">Unpublished messages, to-do lists, and document drafts you started and haven't posted yet.</p>
-        </div>
+        {{-- =============================================================== --}}
+        {{-- VIEW 1: YOUR DRAFTS LIST (/my/drafts)                           --}}
+        {{-- =============================================================== --}}
+        <div x-show="!selectedDraft" class="px-8 sm:px-14 pt-9 pb-16">
+            <h1 class="text-[28px] sm:text-[32px] font-black text-[#1d1c1b] tracking-tight leading-tight mb-6">Your Drafts</h1>
 
-        <button @click="createModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-[#199849] hover:bg-[#15803d] text-white font-bold rounded-xl text-xs shadow-2xs transition-all self-start sm:self-auto">
-            <i data-lucide="plus" class="w-4 h-4"></i>
-            <span>New Draft</span>
-        </button>
-    </div>
+            <div class="divide-y divide-[#e5e2dc]">
+                <template x-for="(draft, index) in drafts" :key="draft.id">
+                    <div class="py-4 flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            {{-- Basecamp DRAFT Document Page Icon --}}
+                            <button type="button" @click="selectedDraft = draft; postedNotice = false"
+                                class="w-9 h-11 rounded-[4px] bg-white border border-[#d4d0c8] shadow-2xs flex flex-col items-center justify-center shrink-0 relative overflow-hidden cursor-pointer hover:border-[#7c7872] transition-colors">
+                                <span class="w-4 h-1.5 rounded-t-full border border-[#9ca3af] mb-0.5"></span>
+                                <span class="px-1 py-0.5 bg-[#e5e7eb] text-[#4b5563] text-[6.5px] font-black tracking-wider uppercase leading-none rounded-2xs">DRAFT</span>
+                                <span class="w-5 h-px bg-[#d1d5db] mt-1"></span>
+                                <span class="w-4 h-px bg-[#d1d5db] mt-0.5"></span>
+                            </button>
 
-    <!-- Filter Tabs -->
-    <div class="flex items-center gap-2 text-xs font-bold bg-white p-1.5 rounded-2xl border border-slate-200/90 shadow-2xs max-w-fit">
-        <button @click="filter = 'all'" :class="filter === 'all' ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'" class="px-3.5 py-1.5 rounded-xl transition-all">
-            All ({{ count($drafts) }})
-        </button>
-        <button @click="filter = 'Discussion'" :class="filter === 'Discussion' ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'" class="px-3.5 py-1.5 rounded-xl transition-all">
-            Discussions
-        </button>
-        <button @click="filter = 'To-do List'" :class="filter === 'To-do List' ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'" class="px-3.5 py-1.5 rounded-xl transition-all">
-            To-do Lists
-        </button>
-        <button @click="filter = 'Document'" :class="filter === 'Document' ? 'bg-slate-900 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'" class="px-3.5 py-1.5 rounded-xl transition-all">
-            Docs & Notes
-        </button>
-    </div>
+                            <div class="min-w-0">
+                                <button type="button" @click="selectedDraft = draft; postedNotice = false"
+                                    class="text-[15px] font-bold text-[#1d1c1b] hover:underline truncate block text-left cursor-pointer"
+                                    x-text="draft.filename"></button>
+                                <div class="text-[13px] text-[#5c5955] mt-0.5">
+                                    File in <span x-text="draft.project"></span> &bull; Updated on <span x-text="draft.updated"></span> &bull;
+                                </div>
+                            </div>
+                        </div>
 
-    <!-- Drafts List (Basecamp Card Fidelity) -->
-    <div class="space-y-3">
-        @forelse($drafts as $d)
-        <div x-show="filter === 'all' || filter === '{{ $d['type'] }}'" class="p-5 bg-white rounded-2xl border border-slate-200/90 hover:border-slate-300 shadow-2xs transition-all group flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="space-y-1.5 min-w-0 flex-1">
-                <div class="flex items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider {{ $d['type'] === 'Discussion' ? 'bg-amber-100 text-amber-800' : ($d['type'] === 'To-do List' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800') }}">
-                        {{ $d['type'] }}
-                    </span>
-                    <span class="text-xs font-semibold text-slate-400">in {{ $d['project_name'] }}</span>
-                </div>
-                <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">
-                    {{ $d['title'] }}
-                </h3>
-                <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                    {{ $d['content'] }}
-                </p>
-                <p class="text-[10px] text-slate-400">
-                    Last modified {{ $d['updated_at'] }}
-                </p>
-            </div>
-
-            <div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
-                @if(!empty($d['project_id']))
-                <a href="{{ route('projects.show', $d['project_id']) }}" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition-colors">
-                    Resume
-                </a>
-                @endif
-                <form action="{{ route('my.drafts.delete', $d['id']) }}" method="POST" onsubmit="return confirm('Discard this draft?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors" title="Discard draft">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-        @empty
-        <div class="py-16 text-center text-slate-400 bg-white rounded-3xl border border-slate-200/90 shadow-2xs space-y-3">
-            <i data-lucide="file-check-2" class="w-12 h-12 mx-auto text-emerald-500 opacity-60"></i>
-            <h3 class="text-sm font-black text-slate-800">You're all clear! No unfinished drafts.</h3>
-            <p class="text-xs text-slate-500 max-w-sm mx-auto">Whenever you start writing a message or doc and navigate away, it will be safely kept here.</p>
-        </div>
-        @endforelse
-    </div>
-
-    <!-- Modal: New Draft -->
-    <div x-show="createModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
-            <div @click="createModal = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"></div>
-            
-            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-lg w-full border border-slate-200 p-6 space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <h3 class="text-base font-black text-slate-900">Create a New Draft</h3>
-                    <button @click="createModal = false" class="text-slate-400 hover:text-slate-600">
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                    </button>
-                </div>
-
-                <form action="{{ route('my.drafts.save') }}" method="POST" class="space-y-4">
-                    @csrf
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Draft Type</label>
-                        <select name="type" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
-                            <option value="Discussion">Message / Discussion Post</option>
-                            <option value="To-do List">To-do Checklist</option>
-                            <option value="Document">Document / Note</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Destination Project</label>
-                        <select name="project_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
-                            @foreach($projects as $p)
-                            <option value="{{ $p->id }}">{{ $p->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Draft Title *</label>
-                        <input type="text" name="title" required placeholder="e.g. Q4 Release Strategy..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Draft Content</label>
-                        <textarea name="content" rows="4" placeholder="Start typing thoughts, items, or notes..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                        <button type="button" @click="createModal = false" class="px-4 py-2 text-xs font-bold text-slate-600">Cancel</button>
-                        <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-2xs transition-colors">
-                            Save to My Drafts
+                        {{-- Right Trash Icon --}}
+                        <button type="button" @click="removeDraft(index)" title="Delete draft"
+                            class="p-1.5 text-[#7c7872] hover:text-[#dc2626] transition-colors shrink-0 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
                         </button>
                     </div>
-                </form>
+                </template>
+
+                <div x-show="drafts.length === 0" x-cloak class="py-12 text-center text-[14px] text-[#7c7872]">
+                    You don&rsquo;t have any saved drafts right now.
+                </div>
             </div>
         </div>
-    </div>
 
+        {{-- =============================================================== --}}
+        {{-- VIEW 2: UNPUBLISHED DRAFT DETAIL VIEW (media_1793278574312)     --}}
+        {{-- =============================================================== --}}
+        <div x-show="selectedDraft" x-cloak>
+            {{-- Top Breadcrumb Header Bar --}}
+            <div class="px-6 py-3 border-b border-[#e5e2dc] bg-[#f7f5f2]/60 flex items-center justify-between gap-2 text-[13px]">
+                <div class="flex items-center flex-wrap gap-1.5 text-[#5c5955]">
+                    <a href="{{ route('projects.show', 4) }}" class="font-bold text-[#1d1c1b] hover:underline">Ajath Infotech Pvt Ltd HQ</a>
+                    <span>&lsaquo;</span>
+                    <a href="{{ route('projects.docs', 4) }}" class="hover:text-[#1d1c1b] hover:underline">Docs &amp; Files</a>
+                    <span>&lsaquo;</span>
+                    <button type="button" @click="selectedDraft = null" class="hover:text-[#1d1c1b] hover:underline cursor-pointer">
+                        Janmaashtami 2022 team outing
+                    </button>
+                </div>
+
+                <button type="button" @click="selectedDraft = null"
+                    class="w-7 h-7 rounded-full border border-[#d4d0c8] flex items-center justify-center text-[#5c5955] hover:text-[#1d1c1b] hover:bg-[#e5e2dc]/40 transition-colors cursor-pointer"
+                    title="Back to Your Drafts">
+                    &bull;&bull;&bull;
+                </button>
+            </div>
+
+            {{-- Sheet Body --}}
+            <div class="px-8 sm:px-14 pt-7 pb-16">
+                {{-- Top Unpublished Draft Banner Box --}}
+                <div class="rounded-[8px] border border-[#e5e2dc] bg-[#f7f5f2]/90 px-6 py-5 text-center mb-8">
+                    <p class="text-[13.5px] text-[#1d1c1b]">
+                        <strong class="font-bold">This unpublished draft</strong> was edited on Aug 19, 2022.
+                        <a href="javascript:void(0)" @click="navigator.clipboard && navigator.clipboard.writeText(window.location.href)" class="underline text-[#1d64c8] hover:opacity-80">Share a link</a> or...
+                    </p>
+
+                    <div class="mt-3.5 flex items-center justify-center gap-2.5">
+                        <a href="{{ route('projects.docs', 4) }}"
+                            class="px-4 py-1.5 rounded-[6px] bg-[#60a5fa] hover:bg-[#3b82f6] text-[#0f172a] text-[13px] font-semibold transition-colors shadow-xs">
+                            Continue editing
+                        </a>
+                        <button type="button" @click="postedNotice = true"
+                            class="px-4 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white hover:bg-[#f2efe9] text-[#1d64c8] text-[13px] font-semibold transition-colors cursor-pointer">
+                            Post this file now...
+                        </button>
+                    </div>
+
+                    <div x-show="postedNotice" x-cloak class="mt-3 text-[12.5px] font-semibold text-[#1f883d]">
+                        File published to Ajath Infotech Pvt Ltd HQ &rsaquo; Docs &amp; Files!
+                    </div>
+                </div>
+
+                {{-- File Title & Metadata --}}
+                <h1 class="text-[26px] sm:text-[30px] font-black text-[#1d1c1b] tracking-tight leading-tight break-all"
+                    x-text="selectedDraft ? selectedDraft.filename : ''"></h1>
+                <p class="text-[14px] text-[#5c5955] mt-1">
+                    August 19, 2022 &bull; <span x-text="selectedDraft ? selectedDraft.size : '4.91 MB'"></span>
+                </p>
+
+                {{-- Large Image Preview --}}
+                <div class="mt-5 max-w-[540px] rounded-[4px] overflow-hidden border border-[#e5e2dc] shadow-xs bg-[#1d1c1b]">
+                    <img :src="selectedDraft ? selectedDraft.image : ''"
+                         :alt="selectedDraft ? selectedDraft.filename : ''"
+                         class="w-full h-auto object-cover">
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
 @endsection
-

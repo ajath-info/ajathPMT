@@ -1,179 +1,188 @@
 @extends('layouts.app')
 
-@section('title', 'My Boosts - Ajath Workspace')
+@section('title', 'My Boosts - Basecamp')
 
 @section('content')
-<div x-data="{ boostModal: false }" class="max-w-4xl mx-auto space-y-6">
+@php
+    $manjotAvatar = ($user->avatar_url && !str_contains($user->avatar_url, 'dicebear'))
+        ? $user->avatar_url
+        : '/uploads/avatars/22369668.png';
+@endphp
 
-    <!-- Top Breadcrumb & Title -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('home') }}" class="text-xs font-semibold text-slate-400 hover:text-slate-700 flex items-center gap-1 transition-colors">
-                    <i data-lucide="home" class="w-3.5 h-3.5"></i> Home
-                </a>
-                <span class="text-slate-300">/</span>
-                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">My Boosts</span>
-            </div>
-            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1 flex items-center gap-2.5">
-                <span class="text-2xl">🚀</span>
-                <span>My Boosts</span>
-            </h1>
-            <p class="text-xs text-slate-500 mt-1">Applause, cheers, and high-fives sent by your teammates across projects.</p>
-        </div>
+<div x-data="{
+        freqModal: false,
+        boostFreq: 'Notifying you of new boosts every 3 hours',
+        oooActive: localStorage.getItem('bc_ooo_active') !== '0'
+    }"
+    class="max-w-[920px] mx-auto pb-20 font-sans text-[#1d2d35]">
 
-        <button @click="boostModal = true" class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl text-xs shadow-2xs transition-all self-start sm:self-auto">
-            <span>🚀</span>
-            <span>Send a Boost</span>
-        </button>
-    </div>
+    <!-- Basecamp Sheet Container (Exact Match to media_1793292796020_5a285afc.jpg) -->
+    <div class="bg-white rounded-t-[10px] border border-[#e5e2dc] shadow-[0_1px_4px_rgba(0,0,0,0.04)] min-h-[calc(100vh-84px)] overflow-hidden relative">
 
-    <!-- Cheer Statistics Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-orange-50 text-2xl flex items-center justify-center flex-shrink-0">
-                🚀
-            </div>
-            <div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boosts Received</span>
-                <p class="text-2xl font-black text-slate-900">{{ count($receivedBoosts) }} cheers</p>
-            </div>
-        </div>
+        <!-- Top Bar: "✓ Notifying you of new boosts every 3 hours" -->
+        <div class="px-6 py-2.5 border-b border-[#ece9e2] flex items-center justify-end text-[12.5px]">
+            <div class="relative">
+                <button type="button"
+                        @click="freqModal = !freqModal"
+                        class="inline-flex items-center gap-1.5 text-[#1d2d35] hover:opacity-80 cursor-pointer">
+                    <svg class="w-3.5 h-3.5 text-[#2da562] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 12.5l2.3 2.3 4.7-4.8"/>
+                    </svg>
+                    <span x-text="boostFreq">Notifying you of new boosts every 3 hours</span>
+                </button>
 
-        <div class="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-2xl flex items-center justify-center flex-shrink-0">
-                👏
-            </div>
-            <div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Boosts Given</span>
-                <p class="text-2xl font-black text-slate-900">{{ count($givenBoosts) }} sent</p>
-            </div>
-        </div>
-
-        <div class="p-5 bg-white rounded-3xl border border-slate-200/90 shadow-2xs flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-pink-50 text-2xl flex items-center justify-center flex-shrink-0">
-                ❤️
-            </div>
-            <div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Team Spirit</span>
-                <p class="text-2xl font-black text-rose-600">100% High</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Boosts Stream -->
-    <div class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xs space-y-6">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <h3 class="text-sm font-black text-slate-900 flex items-center gap-2">
-                <span>Recent Applause & Cheers</span>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Live</span>
-            </h3>
-        </div>
-
-        <div class="divide-y divide-slate-100">
-            @forelse($receivedBoosts as $b)
-            <div class="py-4 flex items-start gap-4 group">
-                <div class="relative flex-shrink-0">
-                    <img src="{{ $b['from_avatar'] }}" class="w-10 h-10 rounded-full border border-slate-200 object-cover">
-                    <span class="absolute -bottom-1 -right-1 text-base bg-white rounded-full p-0.5 shadow-2xs leading-none">
-                        {{ $b['emoji'] }}
-                    </span>
-                </div>
-
-                <div class="space-y-1 flex-1">
-                    <p class="text-xs text-slate-800 leading-snug">
-                        <strong class="font-black text-slate-900">{{ $b['from_name'] }}</strong>
-                        <span class="font-medium text-slate-600">boosted you</span>
-                        <span class="text-slate-500">{{ $b['context'] }}</span>
-                    </p>
-                    <div class="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
-                        <span class="text-emerald-700 font-semibold">{{ $b['project'] }}</span>
-                        <span>•</span>
-                        <span>{{ $b['time'] }}</span>
-                    </div>
-                </div>
-            </div>
-            @empty
-            <div class="py-8 text-center text-slate-400">
-                <p class="text-xs font-semibold">No boosts received yet. Do great work and cheer on your team!</p>
-            </div>
-            @endforelse
-        </div>
-    </div>
-
-    <!-- Modal: Send a Boost -->
-    <div x-show="boostModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true">
-        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:p-0">
-            <div @click="boostModal = false" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"></div>
-            
-            <div class="relative bg-white rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-sm w-full border border-slate-200 p-6 space-y-4">
-                <div class="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                        <span>🚀 Send a Boost</span>
-                    </h3>
-                    <button @click="boostModal = false" class="text-slate-400 hover:text-slate-600">
-                        <i data-lucide="x" class="w-5 h-5"></i>
+                <!-- Frequency Popover -->
+                <div x-show="freqModal"
+                     x-cloak
+                     @click.outside="freqModal = false"
+                     class="absolute right-0 top-[calc(100%+6px)] w-[250px] rounded-[8px] bg-white border border-[#d8d4cc] shadow-xl py-2 px-3 z-30 text-left space-y-1 text-[13px]">
+                    <button type="button"
+                            @click="boostFreq = 'Notifying you of new boosts every 3 hours'; freqModal = false"
+                            class="w-full py-1.5 px-2 rounded hover:bg-[#f6f4f0] text-left cursor-pointer font-medium">
+                        Every 3 hours
+                    </button>
+                    <button type="button"
+                            @click="boostFreq = 'Notifying you of new boosts once a day'; freqModal = false"
+                            class="w-full py-1.5 px-2 rounded hover:bg-[#f6f4f0] text-left cursor-pointer font-medium">
+                        Once a day
+                    </button>
+                    <button type="button"
+                            @click="boostFreq = 'Boost notifications turned off'; freqModal = false"
+                            class="w-full py-1.5 px-2 rounded hover:bg-[#f6f4f0] text-left cursor-pointer font-medium">
+                        Don&rsquo;t notify me
                     </button>
                 </div>
-
-                <form action="{{ route('my.boosts.give') }}" method="POST" class="space-y-4">
-                    @csrf
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Pick a Teammate</label>
-                        <select name="user_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold">
-                            @foreach($teamMembers as $tm)
-                            <option value="{{ $tm->id }}">{{ $tm->name }} ({{ $tm->job_title ?: 'Team' }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Choose Reaction</label>
-                        <div class="grid grid-cols-5 gap-2 text-center">
-                            <label class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer flex flex-col items-center">
-                                <input type="radio" name="emoji" value="🚀" checked class="hidden">
-                                <span class="text-xl">🚀</span>
-                                <span class="text-[9px] font-bold text-slate-600 mt-1">Rocket</span>
-                            </label>
-                            <label class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer flex flex-col items-center">
-                                <input type="radio" name="emoji" value="👏" class="hidden">
-                                <span class="text-xl">👏</span>
-                                <span class="text-[9px] font-bold text-slate-600 mt-1">Clap</span>
-                            </label>
-                            <label class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer flex flex-col items-center">
-                                <input type="radio" name="emoji" value="🎉" class="hidden">
-                                <span class="text-xl">🎉</span>
-                                <span class="text-[9px] font-bold text-slate-600 mt-1">Party</span>
-                            </label>
-                            <label class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer flex flex-col items-center">
-                                <input type="radio" name="emoji" value="❤️" class="hidden">
-                                <span class="text-xl">❤️</span>
-                                <span class="text-[9px] font-bold text-slate-600 mt-1">Heart</span>
-                            </label>
-                            <label class="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer flex flex-col items-center">
-                                <input type="radio" name="emoji" value="⚡" class="hidden">
-                                <span class="text-xl">⚡</span>
-                                <span class="text-[9px] font-bold text-slate-600 mt-1">Energy</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Personal Note (Optional)</label>
-                        <input type="text" name="message" placeholder="Great job on the deliverable!" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    </div>
-
-                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                        <button type="button" @click="boostModal = false" class="px-4 py-2 text-xs font-bold text-slate-600">Cancel</button>
-                        <button type="submit" class="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold rounded-xl text-xs shadow-2xs transition-colors">
-                            Send Boost
-                        </button>
-                    </div>
-                </form>
             </div>
         </div>
-    </div>
 
+        <!-- Main Sheet Content -->
+        <div class="px-8 sm:px-14 pt-8 pb-20">
+
+            <!-- Heading: You have 🚀 Boosts! -->
+            <h1 class="text-[28px] sm:text-[32px] font-extrabold text-[#1d2d35] tracking-[-0.025em] leading-[1.15] mb-7">
+                You have 🚀 Boosts!
+            </h1>
+
+            <!-- =================================================================== -->
+            <!-- BOOST GROUP 1: Boosted Wednesday, January 21                        -->
+            <!-- =================================================================== -->
+            <div class="mb-10">
+                <!-- Wavy Orange Divider with Centered Date -->
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-[8px] overflow-hidden">
+                        <svg class="w-full h-[8px] text-[#d97706]" preserveAspectRatio="none" viewBox="0 0 400 8" fill="none">
+                            <path d="M0 4 Q 5 0, 10 4 T 20 4 T 30 4 T 40 4 T 50 4 T 60 4 T 70 4 T 80 4 T 90 4 T 100 4 T 110 4 T 120 4 T 130 4 T 140 4 T 150 4 T 160 4 T 170 4 T 180 4 T 190 4 T 200 4 T 210 4 T 220 4 T 230 4 T 240 4 T 250 4 T 260 4 T 270 4 T 280 4 T 290 4 T 300 4 T 310 4 T 320 4 T 330 4 T 340 4 T 350 4 T 360 4 T 370 4 T 380 4 T 390 4 T 400 4"
+                                  stroke="currentColor" stroke-width="1.35" fill="none"/>
+                        </svg>
+                    </div>
+                    <span class="text-[13px] font-normal text-[#e0823d] whitespace-nowrap select-none">
+                        Boosted Wednesday, January 21
+                    </span>
+                    <div class="flex-1 h-[8px] overflow-hidden">
+                        <svg class="w-full h-[8px] text-[#d97706]" preserveAspectRatio="none" viewBox="0 0 400 8" fill="none">
+                            <path d="M0 4 Q 5 0, 10 4 T 20 4 T 30 4 T 40 4 T 50 4 T 60 4 T 70 4 T 80 4 T 90 4 T 100 4 T 110 4 T 120 4 T 130 4 T 140 4 T 150 4 T 160 4 T 170 4 T 180 4 T 190 4 T 200 4 T 210 4 T 220 4 T 230 4 T 240 4 T 250 4 T 260 4 T 270 4 T 280 4 T 290 4 T 300 4 T 310 4 T 320 4 T 330 4 T 340 4 T 350 4 T 360 4 T 370 4 T 380 4 T 390 4 T 400 4"
+                                  stroke="currentColor" stroke-width="1.35" fill="none"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Boosted Card + Booster Reaction -->
+                <div class="mt-6 flex items-start gap-4">
+                    <div class="relative w-[224px] rounded-[10px] border border-[#dcd8d0] bg-[#f9f8f6] p-4 pl-5 ml-3 shadow-2xs">
+                        <!-- Overlapping Top-Left User Avatar with OUT Badge & Blue Discussion Icon -->
+                        <div class="absolute -left-4 top-3 w-[34px] h-[34px]">
+                            <div class="w-[34px] h-[34px] rounded-full overflow-hidden relative shadow-xs">
+                                <img src="{{ $manjotAvatar }}" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                                <div x-show="oooActive" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
+                                    <span class="text-[7.5px] font-black text-[#1d1c1b] leading-none tracking-tight">OUT</span>
+                                </div>
+                            </div>
+                            <span class="absolute -top-0.5 -right-0.5 w-[13px] h-[13px] rounded-full bg-[#3b82f6] text-white flex items-center justify-center shadow-2xs">
+                                <svg class="w-2 h-2 fill-current" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                            </span>
+                        </div>
+
+                        <a href="{{ url('/projects/4/discussions/13829') }}"
+                           class="block text-[13px] font-bold text-[#1d2d35] hover:underline leading-[1.3]">
+                            🏳️ Daily Scrum &ndash; MoM - 21/1/2026
+                        </a>
+                        <p class="text-[12.5px] text-[#1d2d35] leading-[1.36] mt-1">
+                            Daily Scrum &ndash; MoM &bull; Harsh and Jitender are already working on ST1 under the guidance of Shachish Sir. &bull; Nikhil has received a couple of CVs via WhatsApp and LinkedIn. &bull; Nirdesh will schedule interv...
+                        </p>
+                    </div>
+
+                    <!-- Booster Avatar + Thumbs Up -->
+                    <div class="pt-3 flex items-center gap-1.5">
+                        <img src="/uploads/avatars/25036340.png"
+                             alt="Shachish Sneh"
+                             title="Shachish Sneh"
+                             class="w-[24px] h-[24px] rounded-full object-cover shadow-2xs">
+                        <span class="text-[17px] leading-none select-none">👍</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================================================================== -->
+            <!-- BOOST GROUP 2: Boosted Tuesday, September 2 2025                    -->
+            <!-- =================================================================== -->
+            <div>
+                <!-- Wavy Orange Divider with Centered Date -->
+                <div class="flex items-center gap-3">
+                    <div class="flex-1 h-[8px] overflow-hidden">
+                        <svg class="w-full h-[8px] text-[#d97706]" preserveAspectRatio="none" viewBox="0 0 400 8" fill="none">
+                            <path d="M0 4 Q 5 0, 10 4 T 20 4 T 30 4 T 40 4 T 50 4 T 60 4 T 70 4 T 80 4 T 90 4 T 100 4 T 110 4 T 120 4 T 130 4 T 140 4 T 150 4 T 160 4 T 170 4 T 180 4 T 190 4 T 200 4 T 210 4 T 220 4 T 230 4 T 240 4 T 250 4 T 260 4 T 270 4 T 280 4 T 290 4 T 300 4 T 310 4 T 320 4 T 330 4 T 340 4 T 350 4 T 360 4 T 370 4 T 380 4 T 390 4 T 400 4"
+                                  stroke="currentColor" stroke-width="1.35" fill="none"/>
+                        </svg>
+                    </div>
+                    <span class="text-[13px] font-normal text-[#e0823d] whitespace-nowrap select-none">
+                        Boosted Tuesday, September 2 2025
+                    </span>
+                    <div class="flex-1 h-[8px] overflow-hidden">
+                        <svg class="w-full h-[8px] text-[#d97706]" preserveAspectRatio="none" viewBox="0 0 400 8" fill="none">
+                            <path d="M0 4 Q 5 0, 10 4 T 20 4 T 30 4 T 40 4 T 50 4 T 60 4 T 70 4 T 80 4 T 90 4 T 100 4 T 110 4 T 120 4 T 130 4 T 140 4 T 150 4 T 160 4 T 170 4 T 180 4 T 190 4 T 200 4 T 210 4 T 220 4 T 230 4 T 240 4 T 250 4 T 260 4 T 270 4 T 280 4 T 290 4 T 300 4 T 310 4 T 320 4 T 330 4 T 340 4 T 350 4 T 360 4 T 370 4 T 380 4 T 390 4 T 400 4"
+                                  stroke="currentColor" stroke-width="1.35" fill="none"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Boosted Card + Booster Reaction -->
+                <div class="mt-6 flex items-start gap-4">
+                    <div class="relative w-[224px] rounded-[10px] border border-[#dcd8d0] bg-[#f9f8f6] p-4 pl-5 ml-3 shadow-2xs">
+                        <!-- Overlapping Top-Left User Avatar with OUT Badge & Blue Comment Icon -->
+                        <div class="absolute -left-4 top-3 w-[34px] h-[34px]">
+                            <div class="w-[34px] h-[34px] rounded-full overflow-hidden relative shadow-xs">
+                                <img src="{{ $manjotAvatar }}" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                                <div x-show="oooActive" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
+                                    <span class="text-[7.5px] font-black text-[#1d1c1b] leading-none tracking-tight">OUT</span>
+                                </div>
+                            </div>
+                            <span class="absolute -top-0.5 -right-0.5 w-[13px] h-[13px] rounded-full bg-[#3b82f6] text-white flex items-center justify-center shadow-2xs">
+                                <svg class="w-2 h-2 fill-current" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                            </span>
+                        </div>
+
+                        <a href="{{ url('/projects/4/discussions/13829') }}"
+                           class="block text-[13px] font-bold text-[#1d2d35] hover:underline leading-[1.3]">
+                            Re: Final Build | Release Note
+                        </a>
+                        <p class="text-[12.5px] text-[#1d2d35] leading-[1.36] mt-1">
+                            Nirdesh please share your RCA report. Also, Ankit kindky make sure all regression test cases pass before final deployment.
+                        </p>
+                    </div>
+
+                    <!-- Booster Avatar + Thumbs Up -->
+                    <div class="pt-3 flex items-center gap-1.5">
+                        <img src="/uploads/avatars/25036340.png"
+                             alt="Shachish Sneh"
+                             title="Shachish Sneh"
+                             class="w-[24px] h-[24px] rounded-full object-cover shadow-2xs">
+                        <span class="text-[17px] leading-none select-none">👍</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
 @endsection
-
