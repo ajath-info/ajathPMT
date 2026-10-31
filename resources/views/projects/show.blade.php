@@ -300,7 +300,14 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
                                 <img src="/uploads/avatars/52873395.png" alt="Shiv Narayan" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
                             @elseif(isset($projectMemberBadges) && $projectMemberBadges->isNotEmpty())
                                 @foreach($projectMemberBadges as $b)
-                                    @if(!empty($b->avatar))
+                                    @if(!empty($b->isSelf))
+                                        <span class="relative w-[26px] h-[26px] rounded-full border border-white overflow-hidden inline-flex flex-shrink-0">
+                                            <img src="{{ $b->avatar ?: '/uploads/avatars/22369668.png' }}" alt="{{ $b->name ?? 'Manjot Singh' }}" class="w-full h-full object-cover">
+                                            <span x-show="oooActive" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
+                                                <span class="text-[6px] font-black text-[#1d1c1b] leading-none">OUT</span>
+                                            </span>
+                                        </span>
+                                    @elseif(!empty($b->avatar))
                                         <img src="{{ $b->avatar }}" alt="{{ $b->initials }}" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
                                     @else
                                         <span class="w-[26px] h-[26px] rounded-full {{ $b->bg }} border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">

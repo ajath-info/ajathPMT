@@ -442,6 +442,7 @@ HTML;
                 foreach ($state['members'] as &$m) {
                     if ((int) ($m['id'] ?? 0) === (int) $user->id || strcasecmp($m['email'] ?? '', $user->email) === 0) {
                         $m['isPending'] = false;
+                        $m['joinedConfirmed'] = true;
                         if (($m['roleBadge'] ?? '') === 'Pending') {
                             $m['roleBadge'] = '';
                         }

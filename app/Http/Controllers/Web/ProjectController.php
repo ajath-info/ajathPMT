@@ -612,27 +612,50 @@ class ProjectController extends Controller
         $paginatedActivities = $activityQuery->paginate(8)->withQueryString();
 
         // Badge helper matching Basecamp screenshot
-        $badgeForUser = function ($name) {
+        $badgeForUser = function ($name, $customAvatar = null, $customInitials = null, $customBg = null) {
             $name = trim($name);
-            if (stripos($name, 'Gaurav') !== false) return (object)['initials' => 'GK', 'bg' => 'bg-[#9333ea]', 'avatar' => null];
-            if (stripos($name, 'Pawandeep') !== false) return (object)['initials' => 'PK', 'bg' => 'bg-[#059669]', 'avatar' => null];
-            if (stripos($name, 'Harshvardhan') !== false) return (object)['initials' => 'HS', 'bg' => 'bg-[#c026d3]', 'avatar' => '/uploads/avatars/47630095.png'];
-            if (stripos($name, 'Rajesh') !== false) return (object)['initials' => 'RK', 'bg' => 'bg-[#db2777]', 'avatar' => null];
-            if (stripos($name, 'Shachish') !== false) return (object)['initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'avatar' => '/uploads/avatars/25036340.png'];
-            if (stripos($name, 'Shiv Narayan') !== false) return (object)['initials' => 'SN', 'bg' => 'bg-[#7c3aed]', 'avatar' => null];
-            if (stripos($name, 'Ajath') !== false) return (object)['initials' => 'AI', 'bg' => 'bg-[#0d9488]', 'avatar' => null];
-            if (stripos($name, 'Manjot') !== false) return (object)['initials' => 'M', 'bg' => 'bg-[#1d4ed8]', 'avatar' => '/uploads/avatars/22369668.png'];
-            $parts = explode(' ', $name);
-            $in = strtoupper(substr($parts[0], 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
-            return (object)['initials' => $in ?: 'TM', 'bg' => 'bg-[#2563eb]', 'avatar' => null];
+            $lower = strtolower($name);
+            if ($lower !== 'shachisheh') {
+                if (stripos($name, 'Edward') !== false) return (object)['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'avatar' => '/uploads/avatars/52829137.png', 'isSelf' => false];
+                if (stripos($name, 'Gaurav') !== false) return (object)['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'avatar' => '/uploads/avatars/53122994.png', 'isSelf' => false];
+                if (stripos($name, 'Pawandeep') !== false) return (object)['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/23053551.png', 'isSelf' => false];
+                if (stripos($name, 'Prashant') !== false) return (object)['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'avatar' => '/uploads/avatars/22369742.png', 'isSelf' => false];
+                if (stripos($name, 'Harshvardhan') !== false) return (object)['name' => 'Harshvardhan Singh', 'initials' => 'HS', 'bg' => 'bg-[#c026d3]', 'avatar' => '/uploads/avatars/47630095.png', 'isSelf' => false];
+                if (stripos($name, 'Rajesh') !== false) return (object)['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'avatar' => '/uploads/avatars/35685578.png', 'isSelf' => false];
+                if (stripos($name, 'Rishabh') !== false) return (object)['name' => 'Rishabh Ojha', 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'avatar' => '/uploads/avatars/51410494.png', 'isSelf' => false];
+                if (stripos($name, 'Shachish Sneh') !== false || $lower === 'shachish') return (object)['name' => 'Shachish Sneh', 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'avatar' => '/uploads/avatars/25036340.png', 'isSelf' => false];
+                if (stripos($name, 'Shiv Narayan') !== false) return (object)['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'avatar' => '/uploads/avatars/52873395.png', 'isSelf' => false];
+                if (stripos($name, 'Ajath') !== false) return (object)['name' => 'Ajath Infotech', 'initials' => 'AI', 'bg' => 'bg-[#0d9488]', 'avatar' => null, 'isSelf' => false];
+                if (stripos($name, 'Manjot') !== false) return (object)['name' => 'Manjot Singh', 'initials' => 'M', 'bg' => 'bg-[#1d4ed8]', 'avatar' => '/uploads/avatars/22369668.png', 'isSelf' => true];
+            }
+            $parts = preg_split('/\s+/', $name);
+            $in = $customInitials ?: strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
+            return (object)[
+                'name' => $name,
+                'initials' => $in ?: 'TM',
+                'bg' => $customBg ?: 'bg-[#0d9488]',
+                'avatar' => $customAvatar,
+                'isSelf' => false,
+            ];
         };
 
-        // Project member badges (matches screenshot row: [AI] [GK] [PK] [RK] [SN])
-        if ($project->id == 4) {
+        // Project member badges: sync with saved `bc_project_people_state_{id}` if present so top-left bar matches `/people/users/edit`
+        $savedPeopleStateForBar = \Illuminate\Support\Facades\Cache::get('bc_project_people_state_' . $project->id);
+        if (is_array($savedPeopleStateForBar) && !empty($savedPeopleStateForBar['members']) && is_array($savedPeopleStateForBar['members'])) {
+            $projectMemberBadges = collect($savedPeopleStateForBar['members'])
+                ->map(fn($m) => $badgeForUser($m['name'] ?? 'Member', $m['avatar'] ?? null, $m['initials'] ?? null, $m['bg'] ?? null));
+        } elseif ($project->id == 4) {
             $projectMemberBadges = collect(['Ajath Infotech', 'Gaurav Khulbey', 'Pawandeep Kaur', 'Rajesh Kumar', 'Shiv Narayan'])
                 ->map(fn($name) => $badgeForUser($name));
         } else {
-            $projectMemberBadges = $project->members->take(6)->map(fn($m) => $badgeForUser($m->name));
+            $memberNames = $project->members->pluck('name')->toArray();
+            foreach (['Manjot Singh', 'Pawandeep Kaur', 'Shachish Sneh'] as $coreAdmin) {
+                if (!collect($memberNames)->contains(fn($n) => stripos($n, explode(' ', $coreAdmin)[0]) !== false)) {
+                    $memberNames[] = $coreAdmin;
+                }
+            }
+            usort($memberNames, 'strcasecmp');
+            $projectMemberBadges = collect($memberNames)->take(10)->map(fn($name) => $badgeForUser($name));
         }
 
         // Transform timeline items
@@ -2003,8 +2026,10 @@ class ProjectController extends Controller
                     $dbUser = $allDbUsers->firstWhere('id', (int) $pmItem['id']);
                 }
 
-                if ($dbUser && $dbUser->email_verified_at !== null) {
-                    $pmItem['id'] = (int) $dbUser->id;
+                if (!empty($pmItem['joinedConfirmed'])) {
+                    if ($dbUser) {
+                        $pmItem['id'] = (int) $dbUser->id;
+                    }
                     $pmItem['isPending'] = false;
                     if (($pmItem['roleBadge'] ?? '') === 'Pending') {
                         $pmItem['roleBadge'] = '';
@@ -2015,7 +2040,7 @@ class ProjectController extends Controller
                         $pmItem['email'] = $dbUser->email;
                     }
                     $pmItem['isPending'] = true;
-                    if (empty($pmItem['roleBadge'])) {
+                    if (empty($pmItem['roleBadge']) || !in_array($pmItem['roleBadge'], ['Owner', 'Admin', 'Client'], true)) {
                         $pmItem['roleBadge'] = !empty($pmItem['isClient']) ? 'Client' : 'Pending';
                     }
                     if (empty($pmItem['company'])) {
@@ -2025,6 +2050,11 @@ class ProjectController extends Controller
             }
         }
         unset($pmItem);
+
+        if (is_array($savedPeopleState)) {
+            $savedPeopleState['members'] = $projectMembers;
+            \Illuminate\Support\Facades\Cache::forever('bc_project_people_state_' . $project->id, $savedPeopleState);
+        }
 
         // Group platform users by Company for "Or pick people from a company..."
         $companyNames = [
