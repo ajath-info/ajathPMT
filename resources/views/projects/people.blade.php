@@ -280,7 +280,7 @@ html.bc-theme-dark .bc-client-switch-on {
                         <div>
                             <strong class="font-bold">This project is Invite-only.</strong>
                             Only the people listed below have access. If you&rsquo;d like everyone in your Basecamp account to be able to access the project,
-                            <button type="button" @click="accessMode = 'all_access'; syncBackend('settings', 0, false)" class="text-[#60a5fa] underline hover:opacity-80 cursor-pointer">switch to All-access</button>
+                            <button type="button" @click="accessMode = 'all_access'; syncBackend('settings', 0, false)" class="text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">switch to All-access</button>
                             instead.
                         </div>
                     </template>
@@ -288,7 +288,7 @@ html.bc-theme-dark .bc-client-switch-on {
                         <div>
                             <strong class="font-bold">This project is All-access.</strong>
                             Everyone in your Basecamp account can access this project. If you&rsquo;d like only the people listed below to have access,
-                            <button type="button" @click="accessMode = 'invite_only'; syncBackend('settings', 0, false)" class="text-[#60a5fa] underline hover:opacity-80 cursor-pointer">switch to Invite-only</button>
+                            <button type="button" @click="accessMode = 'invite_only'; syncBackend('settings', 0, false)" class="text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">switch to Invite-only</button>
                             instead.
                         </div>
                     </template>
@@ -322,12 +322,12 @@ html.bc-theme-dark .bc-client-switch-on {
                                     <div class="flex items-center flex-wrap gap-1.5">
                                         <span class="text-[15.5px] font-bold text-[#1d2d35]" x-text="m.name"></span>
                                         <template x-if="m.roleBadge === 'Owner'">
-                                            <span class="bc-badge-dark-text px-2.5 py-0.5 rounded-full bg-[#d870ad] text-[#1d2d35] text-[11px] font-bold leading-none">
+                                            <span class="px-2.5 py-0.5 rounded-full bg-[#e0669e] text-white text-[11px] font-bold leading-none">
                                                 Owner
                                             </span>
                                         </template>
                                         <template x-if="m.roleBadge === 'Admin'">
-                                            <span class="bc-badge-dark-text px-2.5 py-0.5 rounded-full bg-[#2bbbad] text-[#1d2d35] text-[11px] font-bold leading-none">
+                                            <span class="px-2.5 py-0.5 rounded-full bg-[#109888] text-white text-[11px] font-bold leading-none">
                                                 Admin
                                             </span>
                                         </template>
@@ -461,7 +461,7 @@ html.bc-theme-dark .bc-client-switch-on {
                         <div class="mt-3.5">
                             <button type="button"
                                     @click="companyPickerOpen = !companyPickerOpen; dropdownOpen = false"
-                                    class="text-[13.5px] text-[#60a5fa] underline hover:opacity-80 cursor-pointer">
+                                    class="text-[13.5px] text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
                                 Or pick people from a company...
                             </button>
                         </div>
@@ -564,7 +564,7 @@ html.bc-theme-dark .bc-client-switch-on {
                     <h2 class="text-[17px] font-bold text-[#1d2d35]">NDC Homes</h2>
                     <button type="button"
                             @click="addClientsModal = !addClientsModal"
-                            class="px-4 py-1.5 rounded-full bg-[#60a5fa] hover:bg-[#3b82f6] text-[#0f172a] text-[13.5px] font-semibold transition-colors cursor-pointer">
+                            class="px-4 py-1.5 rounded-full bg-[#1b6ac9] hover:bg-[#1557a8] text-white text-[13.5px] font-semibold transition-colors cursor-pointer">
                         Add clients
                     </button>
                 </div>
@@ -613,14 +613,14 @@ html.bc-theme-dark .bc-client-switch-on {
                 <div class="space-y-5">
                     <template x-for="c in clientMembers" :key="c.id">
                         <div class="flex items-start gap-3.5">
-                            <!-- Purple Circle Avatar (Matches media_1793346403485_45e6f0b5.jpg) -->
+                            <!-- Client Avatar (Matches media_1793435235267_c172778d.jpg) -->
                             <div class="relative w-[42px] h-[42px] rounded-full overflow-hidden flex-shrink-0 mt-0.5 shadow-2xs">
                                 <template x-if="c.avatar">
                                     <img :src="c.avatar" :alt="c.name" class="w-full h-full object-cover">
                                 </template>
                                 <template x-if="!c.avatar">
                                     <span class="w-full h-full flex items-center justify-center text-white font-bold text-[16px] select-none"
-                                          :class="c.bg || 'bg-[#c026d3]'"
+                                          :class="c.bg || 'bg-[#e0522b]'"
                                           x-text="c.initials"></span>
                                 </template>
                             </div>
@@ -629,7 +629,7 @@ html.bc-theme-dark .bc-client-switch-on {
                             <div class="min-w-0 flex-1 leading-snug">
                                 <div class="flex items-center flex-wrap gap-1.5">
                                     <span class="text-[15.5px] font-bold text-[#1d2d35]" x-text="c.name"></span>
-                                    <span class="px-2.5 py-0.5 rounded-full bg-[#92602a] text-white text-[11px] font-bold leading-none">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-[#f9d976] text-[#1d2d35] text-[11px] font-bold leading-none">
                                         Client
                                     </span>
                                 </div>

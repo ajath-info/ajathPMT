@@ -2611,10 +2611,10 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                     </div>
                 </template>
 
-                <!-- Role Pill Badge (e.g. Owner / Admin) -->
+                <!-- Role Pill Badge (e.g. Owner / Admin / Client) -->
                 <template x-if="profileUser.roleBadge">
                     <span class="-mt-3 relative z-10 px-3 py-0.5 rounded-full text-[12px] font-extrabold leading-tight shadow-xs"
-                          :class="profileUser.isSelf ? 'bg-[#d870ad] text-[#1d2d35]' : 'bg-[#5fd4a2] text-[#0b4f35]'"
+                          :class="profileUser.isSelf ? 'bg-[#d870ad] text-[#1d2d35]' : (profileUser.roleBadge === 'Client' ? 'bg-[#f9d976] text-[#1d2d35]' : 'bg-[#5fd4a2] text-[#0b4f35]')"
                           x-text="profileUser.roleBadge"></span>
                 </template>
             </div>
@@ -2999,6 +2999,9 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
         };
 
         window.BC_USERS_BY_INITIALS = {
+            'E': { id: 26, firstName: 'Edward', initials: 'E', bg: 'bg-[#e0522b]', name: 'Edward', roleBadge: 'Client', jobTitle: 'Project Owner at NDC Homes', avatar: null, docsUrl: '/projects/26/docs' },
+            'RO': { id: 53, firstName: 'Rishabh', initials: 'RO', bg: 'bg-[#00796b]', name: 'Rishabh Ojha', roleBadge: '', jobTitle: 'Web Developer at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/26/docs' },
+            'RC': { id: 53, firstName: 'Rishabh', initials: 'RO', bg: 'bg-[#00796b]', name: 'Rishabh Ojha', roleBadge: '', jobTitle: 'Web Developer at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/26/docs' },
             'PK': { id: 45, firstName: 'Pawandeep', initials: 'PK', bg: 'bg-[#00897b]', name: 'Pawandeep Kaur', roleBadge: 'Admin', jobTitle: 'Manager at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/29/docs' },
             'GK': { id: 28, firstName: 'Gaurav', initials: 'GK', bg: 'bg-[#9333ea]', name: 'Gaurav Khulbey', roleBadge: '', jobTitle: 'Cybersecurity Expert at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/4/docs' },
             'HK': { id: 32, firstName: 'Harshvardhan', initials: 'HK', bg: 'bg-[#c026d3]', name: 'Harshvardhan Singh', roleBadge: '', jobTitle: 'AI Consultant', avatar: '/uploads/avatars/47630095.png', docsUrl: '/projects/4/docs' },
@@ -3013,10 +3016,10 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
             'DMON': { id: 23, firstName: 'Doug', initials: 'DMON', bg: 'bg-[#ea580c]', name: 'Doug Morneau', roleBadge: 'Client', jobTitle: 'Product Owner', avatar: null, docsUrl: '/projects/4/docs' },
             'SR': { id: 66, firstName: 'Srijita', initials: 'SR', bg: 'bg-[#7c3aed]', name: 'Srijita Roy', roleBadge: '', jobTitle: 'AI Consultant', avatar: null, docsUrl: '/projects/4/docs' },
             'A': { id: 4, firstName: 'AJ', initials: 'A', bg: 'bg-[#e11d48]', name: 'AJ', roleBadge: 'Client', jobTitle: 'Product Owner', avatar: null, docsUrl: '/projects/4/docs' },
-            'SN': { id: 62, firstName: 'Shiv', initials: 'SN', bg: 'bg-[#9333ea]', name: 'Shiv Narayan', roleBadge: '', jobTitle: 'Team Member at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/4/docs' },
+            'SN': { id: 62, firstName: 'Shiv', initials: 'SN', bg: 'bg-[#9333ea]', name: 'Shiv Narayan', roleBadge: '', jobTitle: 'Full Stack Developer at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/4/docs' },
             'NV': { id: 148, firstName: 'Nirdesh', initials: 'NV', bg: 'bg-[#0d9488]', name: 'Nirdesh Verma', roleBadge: '', jobTitle: 'QA Engineer at Borgfy', avatar: '/uploads/avatars/48060513.png', docsUrl: '/projects/4/docs' },
             'NA': { id: 147, firstName: 'Nikhil', initials: 'NA', bg: 'bg-[#0284c7]', name: 'Nikhil Aneja', roleBadge: '', jobTitle: 'Recruitment Specialist at ITG', avatar: '/uploads/avatars/48443395.png', docsUrl: '/projects/4/docs' },
-            'P': { id: 45, firstName: 'Prashant', initials: 'P', bg: 'bg-[#2563eb]', name: 'Prashant', roleBadge: '', jobTitle: 'Analyst at Ajath Infotech Pvt Ltd', avatar: '/uploads/avatars/22369670.png', docsUrl: '/projects/4/docs' },
+            'P': { id: 48, firstName: 'Prashant', initials: 'P', bg: 'bg-[#2563eb]', name: 'Prashant', roleBadge: '', jobTitle: 'Analyst at Ajath Infotech Pvt Ltd', avatar: '/uploads/avatars/22369742.png', docsUrl: '/projects/26/docs' },
             'AG': { id: 146, firstName: 'Ankit', initials: 'AG', bg: 'bg-[#d946ef]', name: 'Ankit G.', roleBadge: '', jobTitle: 'Business Development at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/5/docs' },
             'S': { id: 45, firstName: 'Shubham', initials: 'S', bg: 'bg-[#2ebd85]', name: 'Shubham', roleBadge: '', jobTitle: 'Sn. Php developer at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/48/docs' },
             'RB': { id: 149, firstName: 'Rudra', initials: 'RB', bg: 'bg-[#92400e]', name: 'Rudra Banger', roleBadge: '', jobTitle: 'Team Member at Ajath Infotech Pvt Ltd', avatar: null, docsUrl: '/projects/4/docs' },
@@ -3033,7 +3036,7 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                 initials: u.initials || 'TM',
                 bg: u.bg || 'bg-[#00897b]',
                 name: u.name || 'Team Member',
-                roleBadge: u.roleBadge || (u.role === 'Owner' || u.role === 'Admin' ? u.role : ''),
+                roleBadge: u.roleBadge || (u.role === 'Owner' || u.role === 'Admin' || u.role === 'Client' ? u.role : ''),
                 jobTitle: u.jobTitle || u.title || 'Team Member at Ajath Infotech Pvt Ltd',
                 location: u.location || '',
                 bio: u.bio || '',
@@ -3055,6 +3058,27 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                 if (src.includes('25036340') || src.includes('22369672') || src.includes('22369669') || /shachish/i.test(alt)) {
                     return window.BC_USERS_BY_INITIALS['SK'];
                 }
+                if (src.includes('22369742') || src.includes('22369670') || /prashant/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['P'];
+                }
+                if (src.includes('52829137') || src.includes('49471926') || /edward/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['E'];
+                }
+                if (src.includes('53122994') || src.includes('39059742') || /gaurav/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['GK'];
+                }
+                if (src.includes('23053551') || /pawandeep/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['PK'];
+                }
+                if (src.includes('35685578') || src.includes('48563099') || /rajesh/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['RK'];
+                }
+                if (src.includes('51410494') || /rishabh/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['RO'];
+                }
+                if (src.includes('52873395') || /shiv/i.test(alt)) {
+                    return window.BC_USERS_BY_INITIALS['SN'];
+                }
                 if (src.includes('47630095') || /harshvardhan/i.test(alt)) {
                     return window.BC_USERS_BY_INITIALS['HK'];
                 }
@@ -3063,9 +3087,6 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                 }
                 if (src.includes('48443395') || /nikhil/i.test(alt)) {
                     return window.BC_USERS_BY_INITIALS['NA'];
-                }
-                if (src.includes('22369670') || /prashant/i.test(alt)) {
-                    return window.BC_USERS_BY_INITIALS['P'];
                 }
                 // Match by alt name against known users
                 for (const key in window.BC_USERS_BY_INITIALS) {
@@ -3160,9 +3181,11 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
         document.addEventListener('click', function(e) {
             const target = e.target;
             if (!target || !target.closest) return;
-            // Skip bottom-left My Account dock button, Pings & Notifications drawer, Pings pages, Boost pills, and Profile Modal itself
+            // Skip bottom-left My Account dock button, project people setup bar, Pings & Notifications drawer, Pings pages, Boost pills, and Profile Modal itself
             if (
                 target.closest('[title="My Account"]') ||
+                target.closest('[title="Set up who\'s on this project"]') ||
+                target.closest('a[href*="/people"]') ||
                 target.closest('[role="dialog"]') ||
                 target.closest('[aria-label="Pings and Notifications"]') ||
                 target.closest('aside[role="complementary"]') ||

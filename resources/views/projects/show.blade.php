@@ -284,20 +284,20 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
                                 </span>
                                 <span class="w-[26px] h-[26px] rounded-full bg-[#9333ea] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">SN</span>
                             @elseif($project->id == 26)
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#ea580c] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">E</span>
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#d946ef] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">GK</span>
+                                <img src="/uploads/avatars/52829137.png" alt="Edward" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
+                                <img src="/uploads/avatars/53122994.png" alt="Gaurav Khulbey" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
                                 <span class="relative w-[26px] h-[26px] rounded-full border border-white overflow-hidden inline-flex flex-shrink-0">
                                     <img src="/uploads/avatars/22369668.png" alt="Manjot Singh" class="w-full h-full object-cover">
                                     <span x-show="oooActive" class="absolute bottom-0 inset-x-0 h-[38%] bg-[#facc15] flex items-center justify-center">
                                         <span class="text-[6px] font-black text-[#1d1c1b] leading-none">OUT</span>
                                     </span>
                                 </span>
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#00897b] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">PK</span>
+                                <img src="/uploads/avatars/23053551.png" alt="Pawandeep Kaur" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
+                                <img src="/uploads/avatars/22369742.png" alt="Prashant" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
+                                <img src="/uploads/avatars/35685578.png" alt="Rajesh Kumar" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
+                                <img src="/uploads/avatars/51410494.png" alt="Rishabh Ojha" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
                                 <img src="/uploads/avatars/25036340.png" alt="Shachish Sneh" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#ec4899] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">RK</span>
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#0284c7] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">RC</span>
-                                <img src="/uploads/avatars/47630095.png" alt="Prashant" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
-                                <span class="w-[26px] h-[26px] rounded-full bg-[#9333ea] border border-white text-white font-bold text-[10px] flex items-center justify-center select-none">SN</span>
+                                <img src="/uploads/avatars/52873395.png" alt="Shiv Narayan" class="w-[26px] h-[26px] rounded-full border border-white object-cover">
                             @elseif(isset($projectMemberBadges) && $projectMemberBadges->isNotEmpty())
                                 @foreach($projectMemberBadges as $b)
                                     @if(!empty($b->avatar))

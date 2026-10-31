@@ -1827,22 +1827,23 @@ class ProjectController extends Controller
         ];
 
         $knownProfiles = [
-            'gaurav' => ['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#c026d3]', 'roleBadge' => '', 'jobTitle' => 'Cybersecurity Expert', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'gaurav' => ['name' => 'Gaurav Khulbey', 'initials' => 'GK', 'bg' => 'bg-[#d946ef]', 'roleBadge' => '', 'jobTitle' => 'Cybersecurity Expert', 'avatar' => '/uploads/avatars/53122994.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'manjot' => ['name' => 'Manjot Singh', 'initials' => 'MS', 'bg' => 'bg-[#1d4ed8]', 'roleBadge' => 'Owner', 'jobTitle' => 'Global VP & Partner', 'avatar' => '/uploads/avatars/22369668.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false, 'isSelf' => true],
-            'pawandeep' => ['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00897b]', 'roleBadge' => 'Admin', 'jobTitle' => 'Manager', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'prashant' => ['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'roleBadge' => '', 'jobTitle' => 'Analyst', 'avatar' => '/uploads/avatars/47630095.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'rajesh' => ['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'roleBadge' => 'Admin', 'jobTitle' => 'Project Lead', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'pawandeep' => ['name' => 'Pawandeep Kaur', 'initials' => 'PK', 'bg' => 'bg-[#00796b]', 'roleBadge' => 'Admin', 'jobTitle' => 'Manager', 'avatar' => '/uploads/avatars/23053551.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'prashant' => ['name' => 'Prashant', 'initials' => 'P', 'bg' => 'bg-[#2563eb]', 'roleBadge' => '', 'jobTitle' => 'Analyst', 'avatar' => '/uploads/avatars/22369742.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'rajesh' => ['name' => 'Rajesh Kumar', 'initials' => 'RK', 'bg' => 'bg-[#a21caf]', 'roleBadge' => 'Admin', 'jobTitle' => 'Project Lead', 'avatar' => '/uploads/avatars/35685578.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'rishabh' => ['name' => 'Rishabh Ojha', 'initials' => 'RO', 'bg' => 'bg-[#00796b]', 'roleBadge' => '', 'jobTitle' => 'Web Developer', 'avatar' => '/uploads/avatars/51410494.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'shachish' => ['name' => 'Shachish Sneh', 'initials' => 'SS', 'bg' => 'bg-[#4f46e5]', 'roleBadge' => 'Admin', 'jobTitle' => 'Solution Architect & Technology Master', 'avatar' => '/uploads/avatars/25036340.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'nikhil' => ['name' => 'Nikhil Aneja', 'initials' => 'NA', 'bg' => 'bg-[#0284c7]', 'roleBadge' => '', 'jobTitle' => 'Recruitment Specialist', 'avatar' => '/uploads/avatars/48443395.png', 'company' => 'ITG', 'isClient' => false],
             'nirdesh' => ['name' => 'Nirdesh Verma', 'initials' => 'NV', 'bg' => 'bg-[#0d9488]', 'roleBadge' => '', 'jobTitle' => 'QA Engineer', 'avatar' => '/uploads/avatars/48060513.png', 'company' => 'Borgfy', 'isClient' => false],
             'rudra' => ['name' => 'Rudra Banger', 'initials' => 'RB', 'bg' => 'bg-[#92400e]', 'roleBadge' => '', 'jobTitle' => 'Mobile Developer', 'avatar' => null, 'company' => 'Contractor', 'isClient' => false],
             'harshvardhan' => ['name' => 'Harshvardhan Singh', 'initials' => 'HK', 'bg' => 'bg-[#c026d3]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => '/uploads/avatars/47630095.png', 'company' => 'Orahi', 'isClient' => false],
             'srijita' => ['name' => 'Srijita Roy', 'initials' => 'SR', 'bg' => 'bg-[#7c3aed]', 'roleBadge' => '', 'jobTitle' => 'AI Consultant', 'avatar' => null, 'company' => 'Orahi', 'isClient' => false],
-            'shiv' => ['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'roleBadge' => '', 'jobTitle' => 'Full Stack Developer', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
+            'shiv' => ['name' => 'Shiv Narayan', 'initials' => 'SN', 'bg' => 'bg-[#9333ea]', 'roleBadge' => '', 'jobTitle' => 'Full Stack Developer', 'avatar' => '/uploads/avatars/52873395.png', 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'kashish' => ['name' => 'Kashish', 'initials' => 'K', 'bg' => 'bg-[#10b981]', 'roleBadge' => '', 'jobTitle' => 'Software Engineer', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'tanu' => ['name' => 'Tanu Shree', 'initials' => 'TS', 'bg' => 'bg-[#eab308]', 'roleBadge' => '', 'jobTitle' => 'HR Executive', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
             'anushka' => ['name' => 'Anushka Garg', 'initials' => 'AG', 'bg' => 'bg-[#ea580c]', 'roleBadge' => '', 'jobTitle' => 'Talent Acquisition', 'avatar' => null, 'company' => 'Ajath Infotech Pvt Ltd', 'isClient' => false],
-            'edward' => ['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#c026d3]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at NDC Homes', 'avatar' => null, 'company' => 'NDC Homes', 'isClient' => true],
+            'edward' => ['name' => 'Edward', 'initials' => 'E', 'bg' => 'bg-[#e0522b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at NDC Homes', 'avatar' => '/uploads/avatars/52829137.png', 'company' => 'NDC Homes', 'isClient' => true],
             'muaad' => ['name' => 'Dr. Muaad Alahmadi', 'initials' => 'DMP', 'bg' => 'bg-[#1e293b]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
             'doug' => ['name' => 'Doug Morneau', 'initials' => 'DMON', 'bg' => 'bg-[#ea580c]', 'roleBadge' => 'Client', 'jobTitle' => 'Project Owner at Healthline', 'avatar' => null, 'company' => 'Healthline', 'isClient' => true],
         ];
@@ -1866,7 +1867,9 @@ class ProjectController extends Controller
 
             $parts = preg_split('/\s+/', $cleanName);
             $initials = strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
-            $avatar = ($u->avatar_url && !str_contains($u->avatar_url, 'dicebear')) ? $u->avatar_url : ($matchedProfile['avatar'] ?? null);
+            $avatar = ($matchedProfile && !empty($matchedProfile['avatar']))
+                ? $matchedProfile['avatar']
+                : (($u->avatar_url && !str_contains($u->avatar_url, 'dicebear')) ? $u->avatar_url : null);
             $jobTitle = $matchedProfile['jobTitle'] ?? str_replace(' at Ajath Infotech Pvt Ltd', '', ($u->job_title ?: 'Team Member'));
 
             $entry = [
@@ -1951,17 +1954,36 @@ class ProjectController extends Controller
                 $lName = strtolower($pu['name']);
                 if (in_array($pu['id'], $dbMemberIds, true) || in_array($lName, $defaultTeamNames, true) || $lName === 'edward' || $lName === 'edward smith') {
                     if ($lName === 'edward' || $lName === 'edward smith') {
-                        $pu['bg'] = 'bg-[#c026d3]';
+                        $pu['bg'] = 'bg-[#e0522b]';
                         $pu['initials'] = 'E';
                         $pu['name'] = 'Edward';
                         $pu['roleBadge'] = 'Client';
                         $pu['jobTitle'] = 'Project Owner at NDC Homes';
+                        $pu['avatar'] = '/uploads/avatars/52829137.png';
                         $pu['isClient'] = true;
                     }
                     $projectMembers[] = $pu;
                 }
             }
         }
+
+        // Normalize known profile avatars & client badges in projectMembers (even if loaded from cache)
+        foreach ($projectMembers as &$pmItem) {
+            $pmLower = strtolower(trim($pmItem['name'] ?? ''));
+            foreach ($knownProfiles as $k => $prof) {
+                if ($pmLower !== '' && str_contains($pmLower, $k)) {
+                    if (!empty($prof['avatar'])) {
+                        $pmItem['avatar'] = $prof['avatar'];
+                    }
+                    $pmItem['bg'] = $prof['bg'];
+                    $pmItem['roleBadge'] = $prof['roleBadge'];
+                    $pmItem['jobTitle'] = $prof['jobTitle'];
+                    $pmItem['isClient'] = $prof['isClient'];
+                    break;
+                }
+            }
+        }
+        unset($pmItem);
 
         // Group platform users by Company for "Or pick people from a company..."
         $companyNames = [
