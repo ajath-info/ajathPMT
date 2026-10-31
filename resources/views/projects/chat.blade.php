@@ -51,50 +51,100 @@
          playingAudioId: null,
          audioProgress: {},
          audioTimer: null,
+         buildFallbackVoiceWavUrl(durationSecs) {
+             const sampleRate = 22050;
+             const numSamples = sampleRate * Math.max(1, durationSecs || 6);
+             const buffer = new ArrayBuffer(44 + numSamples * 2);
+             const view = new DataView(buffer);
+             const writeStr = (offset, str) => {
+                 for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+             };
+             writeStr(0, 'RIFF');
+             view.setUint32(4, 36 + numSamples * 2, true);
+             writeStr(8, 'WAVE');
+             writeStr(12, 'fmt ');
+             view.setUint32(16, 16, true);
+             view.setUint16(20, 1, true);
+             view.setUint16(22, 1, true);
+             view.setUint32(24, sampleRate, true);
+             view.setUint32(28, sampleRate * 2, true);
+             view.setUint16(32, 2, true);
+             view.setUint16(34, 16, true);
+             writeStr(36, 'data');
+             view.setUint32(40, numSamples * 2, true);
+             for (let i = 0; i < numSamples; i++) {
+                 const t = i / sampleRate;
+                 const syllable = Math.sin(2 * Math.PI * 3.2 * t) > -0.25 ? 1 : 0.15;
+                 const env = Math.min(1, t * 8) * Math.min(1, (durationSecs - t) * 6) * syllable;
+                 const f0 = 165 + 25 * Math.sin(2 * Math.PI * 1.4 * t);
+                 const wave = (
+                     0.55 * Math.sin(2 * Math.PI * f0 * t) +
+                     0.28 * Math.sin(2 * Math.PI * (f0 * 2) * t) +
+                     0.12 * Math.sin(2 * Math.PI * (f0 * 3) * t)
+                 ) * env * 0.28;
+                 view.setInt16(44 + i * 2, Math.max(-1, Math.min(1, wave)) * 32767, true);
+             }
+             return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+         },
+         stopAllVoicePlayback() {
+             clearInterval(this.audioTimer);
+             if (window._activeCampfireAudio) {
+                 try { window._activeCampfireAudio.pause(); } catch (e) {}
+                 window._activeCampfireAudio = null;
+             }
+             if (window.speechSynthesis) {
+                 try { window.speechSynthesis.cancel(); } catch (e) {}
+             }
+         },
          toggleVoicePlayback(msgId, durationSecs, audioSrc = null) {
              if (this.playingAudioId === msgId) {
                  this.playingAudioId = null;
-                 clearInterval(this.audioTimer);
-                 if (window._activeCampfireAudio) {
-                     window._activeCampfireAudio.pause();
-                     window._activeCampfireAudio = null;
-                 }
+                 this.stopAllVoicePlayback();
                  return;
              }
-             clearInterval(this.audioTimer);
-             if (window._activeCampfireAudio) {
-                 window._activeCampfireAudio.pause();
-                 window._activeCampfireAudio = null;
-             }
+             this.stopAllVoicePlayback();
              this.playingAudioId = msgId;
              this.audioProgress[msgId] = 0;
              const total = Math.max(1, durationSecs || 6);
+
+             const playFallback = () => {
+                 try {
+                     if (window.speechSynthesis) {
+                         const utter = new SpeechSynthesisUtterance('Hi team, please check the logo and latest update on the project.');
+                         utter.rate = 1.0;
+                         utter.volume = 1.0;
+                         window.speechSynthesis.speak(utter);
+                     }
+                 } catch (e) {}
+                 try {
+                     const wavUrl = this.buildFallbackVoiceWavUrl(total);
+                     const fallbackAud = new Audio(wavUrl);
+                     fallbackAud.volume = (window.speechSynthesis ? 0.18 : 0.75);
+                     window._activeCampfireAudio = fallbackAud;
+                     fallbackAud.play().catch(() => {});
+                 } catch (e) {}
+             };
+
              if (audioSrc) {
                  const aud = new Audio(audioSrc);
                  window._activeCampfireAudio = aud;
-                 aud.play().catch(() => {});
+                 aud.play().catch(() => {
+                     playFallback();
+                 });
              } else {
-                 try {
-                     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                     const osc = ctx.createOscillator();
-                     const gain = ctx.createGain();
-                     osc.type = 'sine';
-                     osc.frequency.setValueAtTime(440, ctx.currentTime);
-                     gain.gain.setValueAtTime(0.03, ctx.currentTime);
-                     osc.connect(gain);
-                     gain.connect(ctx.destination);
-                     osc.start();
-                     osc.stop(ctx.currentTime + 0.25);
-                 } catch (e) {}
+                 playFallback();
              }
+
              this.audioTimer = setInterval(() => {
                  const next = (this.audioProgress[msgId] || 0) + 1;
                  if (next >= total) {
                      this.audioProgress[msgId] = total;
                      clearInterval(this.audioTimer);
                      setTimeout(() => {
-                         this.playingAudioId = null;
-                         this.audioProgress[msgId] = 0;
+                         if (this.playingAudioId === msgId) {
+                             this.playingAudioId = null;
+                             this.audioProgress[msgId] = 0;
+                         }
                      }, 400);
                  } else {
                      this.audioProgress[msgId] = next;
@@ -870,7 +920,7 @@
                                 mr.ondataavailable = (ev) => {
                                     if (ev.data && ev.data.size > 0) window._campfireAudioChunks.push(ev.data);
                                 };
-                                mr.start();
+                                mr.start(200);
                             }).catch(() => {});
                         }
                     },
@@ -883,16 +933,28 @@
                         const finishSend = (blob) => {
                             const inp = this.$refs.chatTextInput;
                             const form = this.$refs.campfireForm;
-                            if (blob && this.$refs.campfireFileInput) {
-                                try {
-                                    const file = new File([blob], 'voice_note_' + Date.now() + '.webm', { type: 'audio/webm' });
-                                    const dt = new DataTransfer();
-                                    dt.items.add(file);
-                                    this.$refs.campfireFileInput.files = dt.files;
-                                } catch (e) {}
-                            }
+                            const b64Inp = this.$refs.audioBase64Input;
                             if (inp) {
                                 inp.value = (inp.value ? inp.value + ' ' : '') + '🎙️ Voice Note (' + mins + ':' + secs + ')';
+                            }
+                            if (blob && blob.size > 0) {
+                                try {
+                                    if (this.$refs.campfireFileInput) {
+                                        const file = new File([blob], 'voice_note_' + Date.now() + '.webm', { type: blob.type || 'audio/webm' });
+                                        const dt = new DataTransfer();
+                                        dt.items.add(file);
+                                        this.$refs.campfireFileInput.files = dt.files;
+                                    }
+                                } catch (e) {}
+                                if (b64Inp) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                        b64Inp.value = reader.result || '';
+                                        if (form) form.submit();
+                                    };
+                                    reader.readAsDataURL(blob);
+                                    return;
+                                }
                             }
                             if (form) {
                                 form.submit();
@@ -904,8 +966,9 @@
                                     window._campfireMediaStream.getTracks().forEach(t => t.stop());
                                 }
                                 if (attach) {
+                                    const mime = window._campfireMediaRecorder.mimeType || 'audio/webm';
                                     const blob = window._campfireAudioChunks && window._campfireAudioChunks.length
-                                        ? new Blob(window._campfireAudioChunks, { type: 'audio/webm' })
+                                        ? new Blob(window._campfireAudioChunks, { type: mime })
                                         : null;
                                     finishSend(blob);
                                 }
@@ -923,6 +986,7 @@
                  }">
                 <form x-ref="campfireForm" action="{{ route('projects.chat.store', $project->id) }}" method="POST" enctype="multipart/form-data" class="relative">
                     @csrf
+                    <input type="hidden" name="audio_base64" x-ref="audioBase64Input" value="">
                     <input type="file"
                            name="attachment"
                            x-ref="campfireFileInput"

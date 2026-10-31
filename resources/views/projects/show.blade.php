@@ -1376,8 +1376,19 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
                                 $sInitials = strtoupper(substr($sParts[0] ?? 'M', 0, 1) . (isset($sParts[1]) ? substr($sParts[1], 0, 1) : ''));
                                 $sAvatar = ($msg->sender && $msg->sender->avatar_url && str_starts_with($msg->sender->avatar_url, '/uploads/avatars/')) ? $msg->sender->avatar_url : null;
                                 $previewAttachment = null;
+                                $isPreviewVoice = false;
+                                $previewVoiceDuration = '0:06';
+                                if (preg_match('/Voice Note\s*\((\d+:\d+)\)/i', $msg->content ?? '', $mVn)) {
+                                    $isPreviewVoice = true;
+                                    $previewVoiceDuration = $mVn[1];
+                                }
                                 if (preg_match('/\[Attachment:\s*([^\]]+)\]/i', $msg->content ?? '', $mAtt)) {
-                                    $previewAttachment = trim($mAtt[1]);
+                                    $attCandidate = trim($mAtt[1]);
+                                    if (preg_match('/\.(?:webm|wav|mp3|ogg|m4a)$/i', $attCandidate)) {
+                                        $isPreviewVoice = true;
+                                    } else {
+                                        $previewAttachment = $attCandidate;
+                                    }
                                 }
                             @endphp
                             <div class="flex items-start gap-2">
@@ -1391,7 +1402,12 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
                                         <span class="font-bold text-[#1d2d35]">{{ $senderName }}</span>
                                         <span class="text-[#6d6a65] text-[10px]">{{ strtolower($msg->created_at->format('g:ia')) }}</span>
                                     </div>
-                                    @if($previewAttachment)
+                                    @if($isPreviewVoice)
+                                        <div class="mt-1 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#1b6ac9]">
+                                            <span class="w-4 h-4 rounded-full bg-[#1b6ac9] text-white inline-flex items-center justify-center text-[8px]">▶</span>
+                                            <span>Voice Note ({{ $previewVoiceDuration }})</span>
+                                        </div>
+                                    @elseif($previewAttachment)
                                         <img src="/uploads/campfire/{{ $previewAttachment }}" alt="{{ $previewAttachment }}" class="mt-1 w-9 h-7 rounded border border-[#d8d4cc] bg-white object-cover">
                                     @else
                                         <p class="text-[11.5px] text-[#1d2d35] leading-[1.28] mt-0.5 line-clamp-2">

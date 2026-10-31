@@ -1818,6 +1818,29 @@ class ProjectController extends Controller
             }
             $attachmentTag = '[Attachment: ' . $origName . ']';
             $content = $content !== '' ? ($attachmentTag . "\n" . $content) : $attachmentTag;
+        } elseif ($request->filled('audio_base64')) {
+            $b64 = (string) $request->input('audio_base64', '');
+            if (preg_match('/^data:audio\/([a-zA-Z0-9+-]+).*?;base64,(.+)$/s', $b64, $am)) {
+                $rawBytes = base64_decode($am[2], true);
+                if ($rawBytes !== false && strlen($rawBytes) > 0) {
+                    $ext = strtolower($am[1]) === 'mp4' ? 'm4a' : (strtolower($am[1]) === 'wav' ? 'wav' : 'webm');
+                    $origName = 'voice_note_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                    $destDir = public_path('uploads/campfire');
+                    if (!is_dir($destDir)) {
+                        @mkdir($destDir, 0755, true);
+                    }
+                    @file_put_contents($destDir . '/' . $origName, $rawBytes);
+                    $baseDestDir = base_path('uploads/campfire');
+                    if ($baseDestDir !== $destDir) {
+                        if (!is_dir($baseDestDir)) {
+                            @mkdir($baseDestDir, 0755, true);
+                        }
+                        @file_put_contents($baseDestDir . '/' . $origName, $rawBytes);
+                    }
+                    $attachmentTag = '[Attachment: ' . $origName . ']';
+                    $content = $content !== '' ? ($attachmentTag . "\n" . $content) : $attachmentTag;
+                }
+            }
         }
 
         if ($content === '') {
