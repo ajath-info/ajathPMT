@@ -38,10 +38,31 @@ html.bc-theme-dark .bc-client-switch-on {
         checkedUserIds: [],
         sentLinkId: null,
         openNotifyId: null,
+        toastMessage: '',
+        toastType: 'success',
+        newPersonFormOpen: false,
+        newPersonName: '',
+        newPersonEmail: '',
+        newPersonCompany: 'Ajath Infotech Pvt Ltd',
+        newPersonTitle: 'Team Member',
+        newPersonIsClient: false,
+        editingEmailMemberId: null,
+        editingEmailValue: '',
+        editingCompanyValue: 'Ajath Infotech Pvt Ltd',
         oooActive: localStorage.getItem('bc_ooo_active') !== '0',
         platformUsers: {{ Js::from($platformUsers) }},
-        members: ({{ Js::from($projectMembers) }} || []).map(m => Object.assign({ notifications: true }, m)),
+        members: ({{ Js::from($projectMembers) }} || []).map(m => Object.assign({ notifications: true, isPending: Boolean(m.isPending || m.roleBadge === 'Pending') }, m)),
         companies: {{ Js::from($companiesList) }},
+
+        showToast(msg, type = 'success') {
+            this.toastMessage = msg;
+            this.toastType = type;
+            setTimeout(() => {
+                if (this.toastMessage === msg) {
+                    this.toastMessage = '';
+                }
+            }, 5000);
+        },
 
         switchTab(t) {
             this.activeTab = t;
@@ -127,10 +148,12 @@ html.bc-theme-dark .bc-client-switch-on {
                     jobTitle: isCli && !(u.jobTitle || '').includes(' at ')
                         ? ((u.jobTitle || 'Project Owner') + ' at ' + (u.company || 'NDC Homes'))
                         : (u.jobTitle || 'Team Member'),
+                    company: u.company || (isCli ? 'NDC Homes' : 'Ajath Infotech Pvt Ltd'),
                     notifications: true
                 });
                 this.members = [...this.members, clone];
-                this.syncBackend('add', clone.id, clone.isClient);
+                this.syncBackend('add', clone.id, clone.isClient, clone);
+                this.showToast(clone.name + ' added to this project.');
             }
             this.searchQuery = '';
             this.clientSearchQuery = '';
@@ -138,42 +161,186 @@ html.bc-theme-dark .bc-client-switch-on {
             this.addClientsModal = false;
         },
 
+        openNewPersonForm(rawInput = '', asClient = false) {
+            const q = (rawInput || '').trim();
+            this.newPersonIsClient = Boolean(asClient || this.activeTab === 'clients');
+            if (q.includes('@')) {
+                const namePart = q.split('@')[0].replace(/[._-]/g, ' ');
+                this.newPersonName = namePart.replace(/\b\w/g, l => l.toUpperCase());
+                this.newPersonEmail = q;
+            } else {
+                this.newPersonName = q.replace(/\b\w/g, l => l.toUpperCase());
+                this.newPersonEmail = q ? (q.toLowerCase().replace(/[^a-z0-9]+/g, '.') + '@ajath.com') : '';
+            }
+            this.newPersonCompany = this.newPersonIsClient ? 'NDC Homes' : 'Ajath Infotech Pvt Ltd';
+            this.newPersonTitle = this.newPersonIsClient ? 'Project Owner' : 'Team Member';
+            this.newPersonFormOpen = true;
+            this.dropdownOpen = false;
+            this.companyPickerOpen = false;
+        },
+
         addTypedPerson(asClient = false) {
             const raw = asClient ? this.clientSearchQuery : this.searchQuery;
             const q = (raw || '').trim();
             if (!q) return;
             const list = asClient ? this.availableClientCandidates : this.availablePlatformUsers;
-            const match = list[0];
-            if (match && (match.name.toLowerCase() === q.toLowerCase() || (match.email || '').toLowerCase() === q.toLowerCase())) {
+            const match = list.find(u =>
+                (u.name || '').toLowerCase() === q.toLowerCase() ||
+                (u.email || '').toLowerCase() === q.toLowerCase()
+            );
+            if (match) {
                 this.addPlatformUser(match, asClient);
                 return;
             }
-            const namePart = q.includes('@') ? q.split('@')[0].replace(/[._-]/g, ' ') : q;
-            const display = namePart.replace(/\b\w/g, l => l.toUpperCase());
-            const parts = display.trim().split(/\s+/);
+            this.openNewPersonForm(q, asClient);
+        },
+
+        submitNewPersonInvite() {
+            const name = (this.newPersonName || '').trim();
+            const email = (this.newPersonEmail || '').trim();
+            const company = (this.newPersonCompany || 'Ajath Infotech Pvt Ltd').trim() || 'Ajath Infotech Pvt Ltd';
+            const title = (this.newPersonTitle || 'Team Member').trim() || 'Team Member';
+            const isCli = Boolean(this.newPersonIsClient);
+
+            if (!name) {
+                this.showToast('Please enter the person\'s name.', 'error');
+                return;
+            }
+            if (!email || !email.includes('@')) {
+                this.showToast('Please enter a valid email address so we can send the invitation email.', 'error');
+                return;
+            }
+
+            const parts = name.split(/\s+/);
             const initials = ((parts[0] ? parts[0][0] : 'U') + (parts[1] ? parts[1][0] : '')).toUpperCase();
-            const isCli = asClient || this.activeTab === 'clients';
+            const formattedJobTitle = isCli && !title.includes(' at ')
+                ? (title + ' at ' + company)
+                : title;
+
             const newMember = {
                 id: Date.now(),
-                name: display,
-                email: q.includes('@') ? q : (q.toLowerCase().replace(/\s+/g, '.') + '@ajath.com'),
+                name: name,
+                email: email,
                 initials: initials,
                 bg: isCli ? 'bg-[#c026d3]' : 'bg-[#0d9488]',
-                roleBadge: isCli ? 'Client' : '',
-                jobTitle: isCli ? 'Project Owner at NDC Homes' : 'Team Member',
+                roleBadge: isCli ? 'Client' : 'Pending',
+                isPending: true,
+                jobTitle: formattedJobTitle,
                 avatar: null,
-                company: isCli ? 'NDC Homes' : (this.selectedCompany || 'Ajath Infotech Pvt Ltd'),
+                company: company,
                 isClient: isCli,
                 isSelf: false,
                 notifications: true
             };
-            this.members = [...this.members, newMember];
-            this.platformUsers = [...this.platformUsers, newMember];
-            this.syncBackend('add', newMember.id, newMember.isClient);
+
+            const existingIdx = this.members.findIndex(m =>
+                (m.email && m.email.toLowerCase() === email.toLowerCase()) ||
+                (m.name && m.name.toLowerCase() === name.toLowerCase())
+            );
+            if (existingIdx !== -1) {
+                this.members[existingIdx] = Object.assign({}, this.members[existingIdx], newMember);
+                this.members = [...this.members];
+            } else {
+                this.members = [...this.members, newMember];
+            }
+
+            if (!this.platformUsers.some(u => (u.email || '').toLowerCase() === email.toLowerCase())) {
+                this.platformUsers = [...this.platformUsers, newMember];
+            }
+
+            // Also add to the selected company in `companies` (e.g. Ajath Infotech Pvt Ltd)
+            let foundComp = false;
+            this.companies = this.companies.map(c => {
+                if (c.name.toLowerCase() === company.toLowerCase()) {
+                    foundComp = true;
+                    const people = Array.isArray(c.people) ? [...c.people] : [];
+                    if (!people.some(p => (p.name || '').toLowerCase() === name.toLowerCase())) {
+                        people.push(newMember);
+                    }
+                    return Object.assign({}, c, { people });
+                }
+                return c;
+            });
+            if (!foundComp) {
+                this.companies = [...this.companies, { name: company, people: [newMember] }];
+            }
+
+            this.syncBackend('invite_new', newMember.id, isCli, newMember);
+            this.showToast('Invitation email sent to ' + email + ' • Added to ' + company + ' (Pending)');
+            this.newPersonFormOpen = false;
             this.searchQuery = '';
             this.clientSearchQuery = '';
-            this.dropdownOpen = false;
             this.addClientsModal = false;
+        },
+
+        sendLoginLink(m) {
+            if (!m) return;
+            this.sentLinkId = m.id;
+            setTimeout(() => { if (this.sentLinkId === m.id) this.sentLinkId = null; }, 3000);
+
+            this.members = this.members.map(item => {
+                if (item.id === m.id) {
+                    const updatedBadge = (item.roleBadge === 'Owner' || item.roleBadge === 'Admin' || item.roleBadge === 'Client')
+                        ? item.roleBadge
+                        : 'Pending';
+                    return Object.assign({}, item, {
+                        isPending: true,
+                        roleBadge: updatedBadge,
+                        company: item.company || 'Ajath Infotech Pvt Ltd'
+                    });
+                }
+                return item;
+            });
+
+            const updatedMember = this.members.find(item => item.id === m.id) || m;
+            this.syncBackend('send_login_link', updatedMember.id, Boolean(updatedMember.isClient), updatedMember);
+            this.showToast('Invitation & login link email sent to ' + (updatedMember.email || updatedMember.name) + ' (Pending)');
+        },
+
+        openEditMemberInvite(m) {
+            this.editingEmailMemberId = m.id;
+            this.editingEmailValue = m.email || (m.name.toLowerCase().replace(/[^a-z0-9]+/g, '.') + '@ajath.com');
+            this.editingCompanyValue = m.company || 'Ajath Infotech Pvt Ltd';
+        },
+
+        saveMemberInviteAndSend(m) {
+            const email = (this.editingEmailValue || '').trim();
+            const company = (this.editingCompanyValue || 'Ajath Infotech Pvt Ltd').trim();
+            if (!email || !email.includes('@')) {
+                this.showToast('Please enter a valid email address.', 'error');
+                return;
+            }
+            this.members = this.members.map(item => {
+                if (item.id === m.id) {
+                    const updatedBadge = (item.roleBadge === 'Owner' || item.roleBadge === 'Admin' || item.roleBadge === 'Client')
+                        ? item.roleBadge
+                        : 'Pending';
+                    return Object.assign({}, item, {
+                        email: email,
+                        company: company,
+                        isPending: true,
+                        roleBadge: updatedBadge
+                    });
+                }
+                return item;
+            });
+
+            const updated = this.members.find(item => item.id === m.id);
+            // Ensure they are listed under the selected company (e.g. Ajath Infotech Pvt Ltd)
+            this.companies = this.companies.map(c => {
+                if (c.name.toLowerCase() === company.toLowerCase()) {
+                    const people = Array.isArray(c.people) ? [...c.people] : [];
+                    if (!people.some(p => (p.name || '').toLowerCase() === updated.name.toLowerCase())) {
+                        people.push(updated);
+                    }
+                    return Object.assign({}, c, { people });
+                }
+                return c;
+            });
+
+            this.editingEmailMemberId = null;
+            this.syncBackend('invite_new', updated.id, Boolean(updated.isClient), updated);
+            this.showToast('Invitation email sent to ' + email + ' • Added to ' + company + ' (Pending)');
         },
 
         toggleCompanyCheckbox(comp) {
@@ -201,6 +368,7 @@ html.bc-theme-dark .bc-client-switch-on {
             });
             this.members = nextMembers;
             this.syncBackend('add_bulk', 0, false);
+            this.showToast(chosen.length + ' ' + (chosen.length === 1 ? 'person' : 'people') + ' added to this project.');
             this.checkedUserIds = [];
             this.companyPickerOpen = false;
         },
@@ -210,7 +378,7 @@ html.bc-theme-dark .bc-client-switch-on {
             this.syncBackend('remove', id, false);
         },
 
-        syncBackend(action, userId, isClient) {
+        syncBackend(action, userId, isClient, targetMember = null) {
             const token = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
             fetch('{{ route('projects.people.update', $project->id) }}', {
                 method: 'POST',
@@ -223,11 +391,24 @@ html.bc-theme-dark .bc-client-switch-on {
                     action: action,
                     user_id: userId,
                     is_client: isClient,
+                    target_member: targetMember,
                     members: this.members,
                     access_mode: this.accessMode,
                     clients_enabled: this.clientsEnabled
                 })
-            }).catch(() => {});
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.member && targetMember) {
+                    this.members = this.members.map(item => {
+                        if (item.id === targetMember.id || (item.email && data.member.email && item.email.toLowerCase() === data.member.email.toLowerCase())) {
+                            return Object.assign({}, item, data.member);
+                        }
+                        return item;
+                    });
+                }
+            })
+            .catch(() => {});
         }
     }"
     class="max-w-[920px] mx-auto pb-20 font-sans text-[#1d2d35]">
@@ -244,6 +425,23 @@ html.bc-theme-dark .bc-client-switch-on {
 
         <!-- Main Sheet Content -->
         <div class="px-8 sm:px-14 pt-8 pb-40">
+
+            <!-- Notification Banner (Email Sent / Company Added) -->
+            <div x-show="toastMessage"
+                 x-cloak
+                 x-transition
+                 class="mb-5 px-4 py-3 rounded-[8px] border flex items-center justify-between gap-3 text-[13.5px] font-semibold shadow-2xs"
+                 :class="toastType === 'error'
+                     ? 'bg-[#fef2f2] border-[#fecaca] text-[#991b1b]'
+                     : 'bg-[#ecfdf5] border-[#a7f3d0] text-[#065f46]'">
+                <div class="flex items-center gap-2">
+                    <svg x-show="toastType !== 'error'" class="w-4 h-4 text-[#10b981] flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span x-text="toastMessage"></span>
+                </div>
+                <button type="button" @click="toastMessage = ''" class="text-xs opacity-70 hover:opacity-100 cursor-pointer">✕</button>
+            </div>
 
             <!-- Title: Who’s on this project? -->
             <h1 class="text-[28px] sm:text-[32px] font-extrabold text-[#1d2d35] tracking-[-0.025em] leading-[1.15] mb-6">
@@ -331,9 +529,14 @@ html.bc-theme-dark .bc-client-switch-on {
                                                 Admin
                                             </span>
                                         </template>
+                                        <template x-if="m.isPending || m.roleBadge === 'Pending'">
+                                            <span class="px-2.5 py-0.5 rounded-full bg-[#facc15] text-[#1d2d35] text-[11px] font-bold leading-none">
+                                                Pending
+                                            </span>
+                                        </template>
                                     </div>
 
-                                    <div class="text-[13.5px] text-[#1d2d35]" x-text="m.jobTitle || 'Team Member'"></div>
+                                    <div class="text-[13.5px] text-[#1d2d35]" x-text="(m.jobTitle || 'Team Member') + (m.company && m.company !== 'Ajath Infotech Pvt Ltd' ? ' • ' + m.company : '')"></div>
 
                                     <!-- Action Links Row -->
                                     <div class="text-[12px] text-[#6d6a65] mt-0.5 flex flex-wrap items-center gap-1 relative" @click.outside="if (openNotifyId === m.id) openNotifyId = null">
@@ -345,9 +548,9 @@ html.bc-theme-dark .bc-client-switch-on {
                                         <span x-show="!m.isSelf">&bull;</span>
                                         <button type="button"
                                                 x-show="!m.isSelf"
-                                                @click="sentLinkId = m.id; setTimeout(() => { if (sentLinkId === m.id) sentLinkId = null; }, 2000)"
+                                                @click="sendLoginLink(m)"
                                                 class="underline hover:text-[#1d2d35] cursor-pointer"
-                                                x-text="sentLinkId === m.id ? 'Login link sent!' : 'Send a link to log in'"></button>
+                                                x-text="sentLinkId === m.id ? 'Invitation email sent!' : 'Send a link to log in'"></button>
 
                                         <span>&bull;</span>
                                         <button type="button"
@@ -355,6 +558,53 @@ html.bc-theme-dark .bc-client-switch-on {
                                                 class="underline hover:text-[#1d2d35] cursor-pointer"
                                                 :class="!m.notifications ? 'text-[#8c8881]' : 'text-[#6d6a65]'"
                                                 x-text="m.notifications ? 'Notifications on' : 'Notifications off'"></button>
+
+                                        <template x-if="!m.isSelf && (m.isPending || m.roleBadge === 'Pending' || !m.roleBadge)">
+                                            <span>
+                                                <span>&bull;</span>
+                                                <button type="button"
+                                                        @click="openEditMemberInvite(m)"
+                                                        class="underline text-[#1b6ac9] hover:opacity-80 cursor-pointer ml-0.5">
+                                                    Add to company / Edit email
+                                                </button>
+                                            </span>
+                                        </template>
+
+                                        <!-- Inline Editor for Email & Company (e.g. Ajath Infotech Pvt Ltd) -->
+                                        <div x-show="editingEmailMemberId === m.id"
+                                             x-cloak
+                                             class="w-full mt-2 p-3 rounded-[8px] border border-[#d8d4cc] bg-[#f9f8f6] text-[#1d2d35] space-y-2 shadow-xs">
+                                            <div class="text-[12px] font-bold text-[#1d2d35]">Send invitation &amp; assign company for <span x-text="m.name"></span></div>
+                                            <div>
+                                                <label class="block text-[11px] font-semibold text-[#6d6a65] mb-0.5">Email address</label>
+                                                <input type="email"
+                                                       x-model="editingEmailValue"
+                                                       placeholder="name@company.com"
+                                                       class="w-full px-2.5 py-1.5 rounded-[5px] border border-[#d4d0c8] bg-white text-[12.5px] text-[#1d2d35] focus:outline-none">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-semibold text-[#6d6a65] mb-0.5">Company</label>
+                                                <select x-model="editingCompanyValue"
+                                                        class="w-full px-2.5 py-1.5 rounded-[5px] border border-[#d4d0c8] bg-white text-[12.5px] text-[#1d2d35] focus:outline-none">
+                                                    <option value="Ajath Infotech Pvt Ltd">Ajath Infotech Pvt Ltd</option>
+                                                    <template x-for="comp in companies" :key="'opt-' + comp.name">
+                                                        <option :value="comp.name" x-show="comp.name !== 'Ajath Infotech Pvt Ltd'" x-text="comp.name"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+                                            <div class="flex items-center justify-end gap-2 pt-1">
+                                                <button type="button"
+                                                        @click="editingEmailMemberId = null"
+                                                        class="px-2.5 py-1 rounded-[5px] border border-[#d4d0c8] text-[12px] text-[#1d2d35] cursor-pointer">
+                                                    Cancel
+                                                </button>
+                                                <button type="button"
+                                                        @click="saveMemberInviteAndSend(m)"
+                                                        class="px-3 py-1 rounded-[5px] bg-[#2da562] hover:bg-[#258c52] text-white font-semibold text-[12px] cursor-pointer">
+                                                    Save &amp; Send Email
+                                                </button>
+                                            </div>
+                                        </div>
 
                                         <!-- Inline Basecamp Notification Settings Popover for Member -->
                                         <div :id="'notify-pop-' + m.id"
@@ -449,21 +699,87 @@ html.bc-theme-dark .bc-client-switch-on {
                                 <!-- Option to invite a new email/name if typed -->
                                 <div x-show="searchQuery.trim().length > 0" class="border-t border-[#ece9e2] mt-1 pt-1 px-2">
                                     <button type="button"
-                                            @click="addTypedPerson(false)"
-                                            class="w-full px-2.5 py-2 rounded-[6px] text-left text-[13px] font-semibold text-[#60a5fa] hover:bg-[#f6f4f0] cursor-pointer">
-                                        + Invite &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo; to this project
+                                            @click="openNewPersonForm(searchQuery, false)"
+                                            class="w-full px-2.5 py-2 rounded-[6px] text-left text-[13px] font-semibold text-[#1b6ac9] hover:bg-[#f6f4f0] cursor-pointer">
+                                        + Invite &ldquo;<span x-text="searchQuery.trim()"></span>&rdquo; to Ajath Infotech Pvt Ltd &amp; this project...
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- "Or pick people from a company..." Link -->
-                        <div class="mt-3.5">
+                        <!-- "Or pick people from a company..." + "Invite a new person to Ajath Infotech Pvt Ltd" Links -->
+                        <div class="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                             <button type="button"
-                                    @click="companyPickerOpen = !companyPickerOpen; dropdownOpen = false"
+                                    @click="companyPickerOpen = !companyPickerOpen; dropdownOpen = false; newPersonFormOpen = false"
                                     class="text-[13.5px] text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
                                 Or pick people from a company...
                             </button>
+                            <span class="text-[#8c8881] text-[12px]">&bull;</span>
+                            <button type="button"
+                                    @click="openNewPersonForm(searchQuery, false)"
+                                    class="text-[13.5px] text-[#1b6ac9] underline hover:opacity-80 cursor-pointer">
+                                + Add new person to Ajath Infotech Pvt Ltd...
+                            </button>
+                        </div>
+
+                        <!-- Inline Basecamp "Add a new person to company & project" Form -->
+                        <div x-show="newPersonFormOpen"
+                             x-cloak
+                             class="mt-3 rounded-[8px] border border-[#d8d4cc] bg-[#f9f8f6] p-4 space-y-3 shadow-sm">
+                            <div class="flex items-center justify-between border-b border-[#ece9e2] pb-2">
+                                <span class="text-[13.5px] font-bold text-[#1d2d35]">Invite a new person &amp; send email</span>
+                                <button type="button" @click="newPersonFormOpen = false" class="text-[12px] text-[#6d6a65] hover:text-[#1d2d35] cursor-pointer">✕</button>
+                            </div>
+
+                            <div class="space-y-2.5">
+                                <div>
+                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Full Name</label>
+                                    <input type="text"
+                                           x-model="newPersonName"
+                                           placeholder="e.g. Shachish Sneh"
+                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Email Address (invitation link will be sent here)</label>
+                                    <input type="email"
+                                           x-model="newPersonEmail"
+                                           placeholder="name@ajath.com"
+                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Company</label>
+                                    <select x-model="newPersonCompany"
+                                            class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
+                                        <option value="Ajath Infotech Pvt Ltd">Ajath Infotech Pvt Ltd (Our Company)</option>
+                                        <template x-for="comp in companies" :key="'newcomp-' + comp.name">
+                                            <option :value="comp.name" x-show="comp.name !== 'Ajath Infotech Pvt Ltd'" x-text="comp.name"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-[12px] font-bold text-[#1d2d35] mb-1">Title / Role</label>
+                                    <input type="text"
+                                           x-model="newPersonTitle"
+                                           placeholder="Team Member"
+                                           class="w-full px-3 py-1.5 rounded-[6px] border border-[#d4d0c8] bg-white text-[13.5px] text-[#1d2d35] focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="pt-1 flex items-center justify-end gap-2">
+                                <button type="button"
+                                        @click="newPersonFormOpen = false"
+                                        class="px-3 py-1.5 rounded-[6px] border border-[#d6d2c9] text-[12.5px] text-[#1d2d35] cursor-pointer">
+                                    Cancel
+                                </button>
+                                <button type="button"
+                                        @click="submitNewPersonInvite()"
+                                        class="px-3.5 py-1.5 rounded-[6px] bg-[#2da562] hover:bg-[#258c52] text-white font-semibold text-[12.5px] cursor-pointer">
+                                    Add to project &amp; send email
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Expandable Company & Platform Users Picker -->
@@ -632,6 +948,11 @@ html.bc-theme-dark .bc-client-switch-on {
                                     <span class="px-2.5 py-0.5 rounded-full bg-[#f9d976] text-[#1d2d35] text-[11px] font-bold leading-none">
                                         Client
                                     </span>
+                                    <template x-if="c.isPending || c.roleBadge === 'Pending'">
+                                        <span class="px-2.5 py-0.5 rounded-full bg-[#facc15] text-[#1d2d35] text-[11px] font-bold leading-none">
+                                            Pending
+                                        </span>
+                                    </template>
                                 </div>
 
                                 <div class="text-[13.5px] text-[#1d2d35]" x-text="c.jobTitle || 'Project Owner at NDC Homes'"></div>
@@ -642,9 +963,9 @@ html.bc-theme-dark .bc-client-switch-on {
                                             class="underline hover:text-[#1d2d35] cursor-pointer">Remove</button>
                                     <span>&bull;</span>
                                     <button type="button"
-                                            @click="sentLinkId = c.id; setTimeout(() => { if (sentLinkId === c.id) sentLinkId = null; }, 2000)"
+                                            @click="sendLoginLink(c)"
                                             class="underline hover:text-[#1d2d35] cursor-pointer"
-                                            x-text="sentLinkId === c.id ? 'Login link sent!' : 'Send a link to log in'"></button>
+                                            x-text="sentLinkId === c.id ? 'Invitation email sent!' : 'Send a link to log in'"></button>
                                 </div>
                             </div>
                         </div>

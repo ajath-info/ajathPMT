@@ -1850,6 +1850,7 @@ class ProjectController extends Controller
 
         $platformUsers = [];
         $seenNames = [];
+        $orgMembersByUser = \App\Models\OrganizationMember::get()->keyBy('user_id');
 
         foreach ($allDbUsers as $idx => $u) {
             $cleanName = trim($u->name);
@@ -1859,11 +1860,15 @@ class ProjectController extends Controller
             $lowerName = strtolower($cleanName);
             $matchedProfile = null;
             foreach ($knownProfiles as $k => $prof) {
-                if (str_contains($lowerName, $k)) {
+                if (str_contains($lowerName, $k) && $lowerName !== 'shachisheh') {
                     $matchedProfile = $prof;
                     break;
                 }
             }
+
+            $orgMem = $orgMembersByUser->get($u->id);
+            $dbCompany = ($orgMem && !empty($orgMem->client_company)) ? $orgMem->client_company : 'Ajath Infotech Pvt Ltd';
+            $dbIsClient = ($orgMem && $orgMem->role === 'CLIENT');
 
             $parts = preg_split('/\s+/', $cleanName);
             $initials = strtoupper(substr($parts[0] ?? 'U', 0, 1) . (isset($parts[1]) ? substr($parts[1], 0, 1) : ''));
@@ -1871,6 +1876,7 @@ class ProjectController extends Controller
                 ? $matchedProfile['avatar']
                 : (($u->avatar_url && !str_contains($u->avatar_url, 'dicebear')) ? $u->avatar_url : null);
             $jobTitle = $matchedProfile['jobTitle'] ?? str_replace(' at Ajath Infotech Pvt Ltd', '', ($u->job_title ?: 'Team Member'));
+            $isPending = !$matchedProfile && $u->email_verified_at === null;
 
             $entry = [
                 'id' => (int) $u->id,
@@ -1878,11 +1884,12 @@ class ProjectController extends Controller
                 'email' => $u->email,
                 'initials' => $matchedProfile['initials'] ?? $initials,
                 'bg' => $matchedProfile['bg'] ?? $palette[$idx % count($palette)],
-                'roleBadge' => $matchedProfile['roleBadge'] ?? '',
+                'roleBadge' => $matchedProfile['roleBadge'] ?? ($isPending ? 'Pending' : ($dbIsClient ? 'Client' : '')),
+                'isPending' => $isPending,
                 'jobTitle' => $jobTitle,
                 'avatar' => $avatar,
-                'company' => $matchedProfile['company'] ?? 'Ajath Infotech Pvt Ltd',
-                'isClient' => $matchedProfile['isClient'] ?? false,
+                'company' => $matchedProfile['company'] ?? $dbCompany,
+                'isClient' => $matchedProfile['isClient'] ?? $dbIsClient,
                 'isSelf' => ((int) $u->id === (int) $user->id) || !empty($matchedProfile['isSelf']),
                 'notifications' => true,
             ];
@@ -1972,8 +1979,9 @@ class ProjectController extends Controller
         // Normalize known profile avatars & client badges in projectMembers (even if loaded from cache)
         foreach ($projectMembers as &$pmItem) {
             $pmLower = strtolower(trim($pmItem['name'] ?? ''));
+            $matchedKnown = false;
             foreach ($knownProfiles as $k => $prof) {
-                if ($pmLower !== '' && str_contains($pmLower, $k)) {
+                if ($pmLower !== '' && str_contains($pmLower, $k) && $pmLower !== 'shachisheh') {
                     if (!empty($prof['avatar'])) {
                         $pmItem['avatar'] = $prof['avatar'];
                     }
@@ -1981,7 +1989,38 @@ class ProjectController extends Controller
                     $pmItem['roleBadge'] = $prof['roleBadge'];
                     $pmItem['jobTitle'] = $prof['jobTitle'];
                     $pmItem['isClient'] = $prof['isClient'];
+                    $matchedKnown = true;
                     break;
+                }
+            }
+
+            if (!$matchedKnown) {
+                $dbUser = null;
+                if (!empty($pmItem['email'])) {
+                    $dbUser = $allDbUsers->first(fn($u) => strcasecmp($u->email, $pmItem['email']) === 0);
+                }
+                if (!$dbUser && !empty($pmItem['id']) && $pmItem['id'] < 9000) {
+                    $dbUser = $allDbUsers->firstWhere('id', (int) $pmItem['id']);
+                }
+
+                if ($dbUser && $dbUser->email_verified_at !== null) {
+                    $pmItem['id'] = (int) $dbUser->id;
+                    $pmItem['isPending'] = false;
+                    if (($pmItem['roleBadge'] ?? '') === 'Pending') {
+                        $pmItem['roleBadge'] = '';
+                    }
+                } else {
+                    if ($dbUser) {
+                        $pmItem['id'] = (int) $dbUser->id;
+                        $pmItem['email'] = $dbUser->email;
+                    }
+                    $pmItem['isPending'] = true;
+                    if (empty($pmItem['roleBadge'])) {
+                        $pmItem['roleBadge'] = !empty($pmItem['isClient']) ? 'Client' : 'Pending';
+                    }
+                    if (empty($pmItem['company'])) {
+                        $pmItem['company'] = !empty($pmItem['isClient']) ? 'NDC Homes' : 'Ajath Infotech Pvt Ltd';
+                    }
                 }
             }
         }
@@ -2032,10 +2071,115 @@ class ProjectController extends Controller
 
         $action = $request->input('action', 'add');
         $targetUserId = (int) $request->input('user_id', 0);
+        $isClient = $request->boolean('is_client', false);
+        $targetMember = $request->input('target_member');
+        $members = is_array($request->input('members')) ? $request->input('members') : [];
 
-        if ($request->has('members') && is_array($request->input('members'))) {
+        $updatedMemberPayload = null;
+        $emailSent = false;
+
+        if (in_array($action, ['invite_new', 'send_login_link', 'add'], true)) {
+            $memberData = is_array($targetMember) ? $targetMember : null;
+            if (!$memberData && $targetUserId > 0) {
+                foreach ($members as $m) {
+                    if ((int) ($m['id'] ?? 0) === $targetUserId) {
+                        $memberData = $m;
+                        break;
+                    }
+                }
+            }
+
+            if ($memberData) {
+                $name = trim($memberData['name'] ?? 'Team Member');
+                $email = strtolower(trim($memberData['email'] ?? ''));
+                if ($email === '' || !str_contains($email, '@')) {
+                    $slug = strtolower(preg_replace('/[^a-zA-Z0-9]+/', '.', $name));
+                    $email = trim($slug, '.') . '@ajath.com';
+                }
+                $company = trim($memberData['company'] ?? ($isClient ? 'NDC Homes' : 'Ajath Infotech Pvt Ltd'));
+                if ($company === '') {
+                    $company = $isClient ? 'NDC Homes' : 'Ajath Infotech Pvt Ltd';
+                }
+                $jobTitle = trim($memberData['jobTitle'] ?? ($isClient ? 'Project Owner at ' . $company : 'Team Member'));
+
+                $invitedUser = User::where('email', $email)->first();
+                if (!$invitedUser && $targetUserId > 0 && $targetUserId < 9000) {
+                    $invitedUser = User::find($targetUserId);
+                }
+
+                if (!$invitedUser) {
+                    $invitedUser = User::create([
+                        'name' => $name,
+                        'email' => $email,
+                        'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+                        'job_title' => $jobTitle,
+                        'avatar_url' => 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($name),
+                        'timezone' => 'Asia/Kolkata',
+                    ]);
+                } else {
+                    if ($action === 'invite_new') {
+                        $invitedUser->update([
+                            'name' => $name ?: $invitedUser->name,
+                            'job_title' => $jobTitle ?: $invitedUser->job_title,
+                        ]);
+                    }
+                }
+
+                $org = \App\Models\Organization::find($project->organization_id)
+                    ?? \App\Models\Organization::first();
+
+                if ($org) {
+                    \App\Models\OrganizationMember::updateOrCreate(
+                        ['organization_id' => $org->id, 'user_id' => $invitedUser->id],
+                        [
+                            'role' => $isClient ? 'CLIENT' : 'MEMBER',
+                            'client_company' => $company,
+                            'joined_at' => now(),
+                        ]
+                    );
+                }
+
+                \App\Models\ProjectMember::firstOrCreate(
+                    ['project_id' => $project->id, 'user_id' => $invitedUser->id],
+                    ['role' => $isClient ? 'PROJECT_CLIENT' : 'PROJECT_MEMBER']
+                );
+
+                if (in_array($action, ['invite_new', 'send_login_link'], true) && $org) {
+                    app(\App\Http\Controllers\Web\PeopleController::class)->sendInvitationEmail($invitedUser, $org, $user);
+                    $emailSent = true;
+                }
+
+                $oldId = $memberData['id'] ?? $targetUserId;
+                $existingBadge = $memberData['roleBadge'] ?? '';
+                $newBadge = ($action === 'invite_new' || $action === 'send_login_link')
+                    ? (in_array($existingBadge, ['Owner', 'Admin', 'Client'], true) ? $existingBadge : 'Pending')
+                    : $existingBadge;
+                $isPendingFlag = ($action === 'invite_new' || $action === 'send_login_link')
+                    ? true
+                    : (bool) ($memberData['isPending'] ?? ($invitedUser->email_verified_at === null));
+
+                $updatedMemberPayload = array_merge($memberData, [
+                    'id' => (int) $invitedUser->id,
+                    'name' => $invitedUser->name,
+                    'email' => $invitedUser->email,
+                    'company' => $company,
+                    'jobTitle' => $jobTitle,
+                    'isPending' => $isPendingFlag,
+                    'roleBadge' => $newBadge,
+                ]);
+
+                foreach ($members as &$mItem) {
+                    if (($mItem['id'] ?? null) == $oldId || strcasecmp($mItem['email'] ?? '', $email) === 0 || strcasecmp($mItem['name'] ?? '', $name) === 0) {
+                        $mItem = array_merge($mItem, $updatedMemberPayload);
+                    }
+                }
+                unset($mItem);
+            }
+        }
+
+        if (!empty($members)) {
             \Illuminate\Support\Facades\Cache::forever('bc_project_people_state_' . $project->id, [
-                'members' => $request->input('members'),
+                'members' => $members,
                 'access_mode' => $request->input('access_mode', 'invite_only'),
                 'clients_enabled' => $request->boolean('clients_enabled', true),
             ]);
@@ -2048,17 +2192,11 @@ class ProjectController extends Controller
             return response()->json(['success' => true]);
         }
 
-        if ($action === 'add') {
-            if ($targetUserId > 0 && User::where('id', $targetUserId)->exists()) {
-                \App\Models\ProjectMember::firstOrCreate(
-                    ['project_id' => $project->id, 'user_id' => $targetUserId],
-                    ['role' => $request->boolean('is_client') ? 'PROJECT_CLIENT' : 'PROJECT_MEMBER']
-                );
-            }
-            return response()->json(['success' => true]);
-        }
-
-        return response()->json(['success' => true]);
+        return response()->json([
+            'success' => true,
+            'email_sent' => $emailSent,
+            'member' => $updatedMemberPayload,
+        ]);
     }
 }
 

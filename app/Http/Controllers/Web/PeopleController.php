@@ -433,6 +433,28 @@ HTML;
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
 
+        // Clear Pending badge in any cached project people states for this user
+        foreach (\App\Models\Project::pluck('id') as $pid) {
+            $cacheKey = 'bc_project_people_state_' . $pid;
+            $state = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            if (is_array($state) && !empty($state['members']) && is_array($state['members'])) {
+                $changed = false;
+                foreach ($state['members'] as &$m) {
+                    if ((int) ($m['id'] ?? 0) === (int) $user->id || strcasecmp($m['email'] ?? '', $user->email) === 0) {
+                        $m['isPending'] = false;
+                        if (($m['roleBadge'] ?? '') === 'Pending') {
+                            $m['roleBadge'] = '';
+                        }
+                        $changed = true;
+                    }
+                }
+                unset($m);
+                if ($changed) {
+                    \Illuminate\Support\Facades\Cache::forever($cacheKey, $state);
+                }
+            }
+        }
+
         $org = $user->organizations()->first() ?? Organization::first();
         if ($org) {
             OrganizationMember::updateOrCreate(
