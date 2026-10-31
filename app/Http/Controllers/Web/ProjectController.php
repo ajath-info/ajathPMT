@@ -1946,7 +1946,9 @@ class ProjectController extends Controller
                 'pawandeep kaur',
                 'prashant',
                 'rajesh kumar',
+                'rishabh ojha',
                 'shachish sneh',
+                'shiv narayan',
             ];
 
             $projectMembers = [];
