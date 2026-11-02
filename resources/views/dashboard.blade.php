@@ -126,6 +126,12 @@
                     <i data-lucide="key" class="w-4 h-4 text-[#1b6ac9] stroke-[2]"></i>
                     <span>Adminland</span>
                 </a>
+
+                <!-- Invoices & GST Billing (invoice.ajath.com) -->
+                <a href="{{ route('invoices.index') }}" class="inline-flex items-center gap-2 py-1.5 px-3.5 bg-white hover:bg-slate-50 text-[#1d2d35] font-bold text-[14.5px] rounded-[8px] border border-[#e8e5df] shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all whitespace-nowrap">
+                    <i data-lucide="receipt" class="w-4 h-4 text-[#4f46e5] stroke-[2]"></i>
+                    <span>Invoices &amp; Billing</span>
+                </a>
                 @endif
 
                 <!-- Droplet customize icon (Right-aligned below Adminland) -->

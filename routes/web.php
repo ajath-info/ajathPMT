@@ -212,4 +212,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/adminland/import/zip', [AdminlandController::class, 'importZip'])->name('adminland.import.zip');
     Route::post('/adminland/import/api', [AdminlandController::class, 'importApi'])->name('adminland.import.api');
     Route::post('/adminland/export', [AdminlandController::class, 'export'])->name('adminland.export');
+
+    // Ajath BillBook Invoicing & GST Billing Integration (https://invoice.ajath.com)
+    Route::get('/invoices', function () {
+        return view('invoices.index');
+    })->name('invoices.index');
+
+    Route::get('/projects/{id}/invoices', function ($id) {
+        $project = \App\Models\Project::findOrFail($id);
+        return view('invoices.index', compact('project'));
+    })->name('projects.invoices');
 });

@@ -66,6 +66,7 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
             { key: 'chat', name: 'Chat', desc: 'Add a chat room to the project', url: '{{ route('projects.chat', $project->id) }}' },
             { key: 'card_table', name: 'Card Table', desc: 'Track work with cards and columns', url: '{{ route('projects.kanban', $project->id) }}', hasBadge: true },
             { key: 'checkins', name: 'Automatic Check-ins', desc: 'Automatically ask recurring questions', url: '{{ route('projects.checkins', $project->id) }}' },
+            { key: 'invoices', name: 'Invoices & Billing', desc: 'Create GST invoices & bill project milestones', url: '{{ route('projects.invoices', $project->id) }}' },
             { key: 'email_forwards', name: 'Email Forwards', desc: 'Forward emails in from outside', url: '{{ route('projects.discussions', $project->id) }}' },
             { key: 'external_link', name: 'External link', desc: 'Link directly to other products', url: '{{ route('projects.docs', $project->id) }}' }
         ],
@@ -351,6 +352,13 @@ window.bcProjectShowState = function (projectId, showUrl, activityFilter) {
 
             <!-- Right: Notifications on Popover & ••• Menu (Exact 1:1 Match to media_1793292992853_0dcf6574.jpg) -->
             <div class="flex items-center gap-2 text-[#1d2d35] relative" @click.outside="projectMenuOpen = false; notifyMenuOpen = false">
+                <!-- Quick Project Invoices & Billing Button -->
+                <a href="{{ route('projects.invoices', $project->id) }}"
+                   class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12.5px] font-semibold text-[#1b6ac9] bg-[#eef5fc] hover:bg-[#dcebfa] border border-[#c5ddf8] transition-colors"
+                   title="Create or view GST Invoices for {{ $project->name }}">
+                    <span>🧾</span>
+                    <span>Invoices</span>
+                </a>
                 <!-- Notifications on / off Toggle Button -->
                 <div class="relative">
                     <button type="button"

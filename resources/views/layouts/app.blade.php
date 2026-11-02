@@ -1512,6 +1512,9 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
                 <a href="{{ request()->routeIs('my.notes') ? route('home') : route('my.notes') }}" class="transition-colors whitespace-nowrap {{ request()->routeIs('my.notes') ? 'bg-[#1d2d35] text-white font-semibold px-3 py-1 rounded-[6px]' : 'px-1.5 py-1 hover:underline' }}">
                     My Notes
                 </a>
+                <a href="{{ request()->routeIs('invoices.*') || request()->routeIs('projects.invoices') ? route('home') : route('invoices.index') }}" class="transition-colors whitespace-nowrap inline-flex items-center gap-1 {{ request()->routeIs('invoices.*') || request()->routeIs('projects.invoices') ? 'bg-[#1d2d35] text-white font-semibold px-3 py-1 rounded-[6px]' : 'px-1.5 py-1 hover:underline text-[#1b6ac9] font-medium' }}">
+                    <span>Invoices &amp; Billing</span>
+                </a>
             </nav>
 
             <!-- Right: Support & AI Support Agent Popover (Matches media_1793278525030 & media_1793282301545) -->
