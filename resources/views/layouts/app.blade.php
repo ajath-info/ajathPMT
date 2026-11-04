@@ -3159,7 +3159,7 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
             const oooActive = localStorage.getItem('bc_ooo_active') !== '0';
             document.querySelectorAll('img').forEach(function(img) {
                 const src = img.getAttribute('src') || '';
-                if (src.includes('avatar_1_1793286396')) {
+                if (src.includes('avatar_1_')) {
                     img.setAttribute('src', '/uploads/avatars/22369668.png');
                 }
                 const updatedSrc = img.getAttribute('src') || '';

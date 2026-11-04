@@ -4,7 +4,7 @@
     $isUserActivity = isset($targetUser) && $targetUser;
     $isPawandeep = $isUserActivity && ($targetUser->id == 45 || stripos($targetUser->name, 'Pawandeep') !== false);
     $isGlobalScope = request()->query('scope') === 'all';
-    $manjotAvatar = ($user->avatar_url && !str_contains($user->avatar_url, 'dicebear') && !str_contains($user->avatar_url, 'avatar_1_1793286396')) ? $user->avatar_url : '/uploads/avatars/22369668.png';
+    $manjotAvatar = ($user->avatar_url && !str_contains($user->avatar_url, 'dicebear') && !str_contains($user->avatar_url, 'avatar_1_')) ? $user->avatar_url : '/uploads/avatars/22369668.png';
     $latestNamedProj = \App\Models\Project::where('name', 'Name the project')->latest('id')->first();
     $namedProjId = $latestNamedProj ? $latestNamedProj->id : 213;
 @endphp

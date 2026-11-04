@@ -31,7 +31,7 @@
     }
 
     $resolveAvatarFor = function ($userObj, $nameStr) {
-        if ($userObj && !empty($userObj->avatar_url) && !str_contains($userObj->avatar_url, 'dicebear') && !str_contains($userObj->avatar_url, 'avatar_1_1793286396')) {
+        if ($userObj && !empty($userObj->avatar_url) && !str_contains($userObj->avatar_url, 'dicebear') && !str_contains($userObj->avatar_url, 'avatar_1_')) {
             return $userObj->avatar_url;
         }
         if (stripos($nameStr, 'Shachish') !== false) return '/uploads/avatars/25036340.png';
@@ -164,7 +164,7 @@
         '🎂','🍴','💰','🏅','🚨','💡','🔧','📈','✅','📢',
     ];
 
-    $currentUserAvatar = ($user->avatar_url && !str_contains($user->avatar_url, 'dicebear') && !str_contains($user->avatar_url, 'avatar_1_1793286396'))
+    $currentUserAvatar = ($user->avatar_url && !str_contains($user->avatar_url, 'dicebear') && !str_contains($user->avatar_url, 'avatar_1_'))
         ? $user->avatar_url
         : '/uploads/avatars/22369668.png';
 @endphp

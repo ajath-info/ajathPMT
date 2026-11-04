@@ -148,7 +148,7 @@ class DashboardController extends Controller
                 return (object)['id' => 4, 'firstName' => 'AJ', 'initials' => 'A', 'bg' => 'bg-[#e11d48]', 'text' => 'text-white', 'name' => 'AJ', 'roleBadge' => 'Client', 'jobTitle' => 'Product Owner', 'avatar' => null, 'docsUrl' => '/projects/4/docs'];
             }
             if (stripos($name, 'Manjot') !== false) {
-                $cleanAvatar = ($avatar && !str_contains($avatar, 'dicebear') && !str_contains($avatar, 'avatar_1_1793286396')) ? $avatar : '/uploads/avatars/22369668.png';
+                $cleanAvatar = ($avatar && !str_contains($avatar, 'dicebear') && !str_contains($avatar, 'avatar_1_')) ? $avatar : '/uploads/avatars/22369668.png';
                 return (object)['id' => 1, 'isSelf' => true, 'firstName' => 'Manjot', 'initials' => 'M', 'bg' => 'bg-[#1d4ed8]', 'text' => 'text-white', 'name' => 'Manjot Singh', 'roleBadge' => 'Owner', 'jobTitle' => 'Global VP & Partner at Ajath Infotech Pvt Ltd', 'avatar' => $cleanAvatar, 'docsUrl' => '/projects/4/docs'];
             }
             $parts = explode(' ', $name);
