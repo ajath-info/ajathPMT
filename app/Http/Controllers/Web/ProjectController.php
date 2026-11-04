@@ -804,6 +804,12 @@ class ProjectController extends Controller
                 ->get();
             foreach ($dbProjMembers as $pmRow) {
                 if (!$pmRow->user) continue;
+                $dt = $pmRow->updated_at ?? $pmRow->created_at ?? now();
+                if (($pmRow->role === 'PROJECT_ADMIN' || (int) $pmRow->user_id === (int) ($project->created_by ?? 1))
+                    && $project->created_at
+                    && abs($dt->diffInSeconds($project->created_at)) <= 60) {
+                    continue;
+                }
                 $uEmail = strtolower($pmRow->user->email ?? '');
                 $uNameLower = strtolower($pmRow->user->name ?? '');
                 $alreadyInCache = $cachedInvitesForProj->contains(function ($inv) use ($uEmail, $uNameLower) {
@@ -811,7 +817,6 @@ class ProjectController extends Controller
                     return ($uEmail !== '' && str_contains($txt, $uEmail)) || ($uNameLower !== '' && str_contains($txt, $uNameLower));
                 });
                 if ($alreadyInCache) continue;
-                $dt = $pmRow->updated_at ?? $pmRow->created_at ?? now();
                 $label = !str_ends_with($uEmail, '@ajath.com') && $uEmail !== '' ? $uEmail : $uNameLower;
                 $extraItems->push((object)[
                     'id' => 'pm_db_' . $pmRow->id,

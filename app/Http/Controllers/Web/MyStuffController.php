@@ -445,6 +445,8 @@ class MyStuffController extends Controller
                 }
             })
             ->where('title', '!=', 'Untitled')
+            ->where('title', 'not like', 'Welcome To Workspace%')
+            ->where('title', 'not like', 'Welcome to %')
             ->whereNotNull('title')
             ->latest('created_at');
 
