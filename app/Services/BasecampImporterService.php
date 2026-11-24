@@ -61,7 +61,7 @@ class BasecampImporterService
                         'name' => $p['name'] ?? $email,
                         'job_title' => $p['title'] ?? 'Team Member',
                         'avatar_url' => $p['avatar_url'] ?? ('https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($p['name'] ?? 'User')),
-                        'password' => Hash::make('Basecamp2026!'),
+                        'password' => Hash::make(\Illuminate\Support\Str::random(40)),
                         'basecamp_id' => (string)($p['id'] ?? ''),
                     ]
                 );
@@ -144,7 +144,7 @@ class BasecampImporterService
                         'name' => $p['name'] ?? 'Basecamp User',
                         'job_title' => $p['title'] ?? 'Team Member',
                         'avatar_url' => $p['avatar_url'] ?? null,
-                        'password' => Hash::make('Basecamp2026!'),
+                        'password' => Hash::make(\Illuminate\Support\Str::random(40)),
                         'basecamp_id' => (string)$p['id'],
                     ]
                 );

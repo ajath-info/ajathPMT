@@ -37,4 +37,11 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', 'https://workspace.ajath.com/auth/google/callback'),
     ],
 
+    // Firebase web app (workspace-bb7f2). The web API key is public by design; it is used
+    // server-side only to verify Google sign-in ID tokens with Google's Identity Toolkit.
+    'firebase' => [
+        'api_key' => env('FIREBASE_API_KEY', 'AIzaSyBJ5JcyXqo5w_BFC2piheiDHAleBtCUkik'),
+        'project_id' => env('FIREBASE_PROJECT_ID', 'workspace-bb7f2'),
+    ],
+
 ];

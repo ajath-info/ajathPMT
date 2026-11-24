@@ -1044,9 +1044,26 @@ class ProjectController extends Controller
             ->whereIn('title', array_keys($depMeta))
             ->get();
 
-        $defaultWorker = $project->members->firstWhere('id', 60)
-            ?? $project->members->first(fn($m) => !in_array((int) $m->id, [1, 5], true) && (($m->pivot->role ?? '') !== 'PROJECT_CLIENT'));
-        $workerId = $defaultWorker ? $defaultWorker->id : 60;
+        if ($depTasks->isEmpty()) {
+            return;
+        }
+
+        $workerId = null;
+        $resolveWorkerId = function () use (&$workerId, $project) {
+            if ($workerId === null) {
+                $defaultWorker = $project->members->firstWhere('id', 60)
+                    ?? $project->members->first(fn($m) => !in_array((int) $m->id, [1, 5], true) && (($m->pivot->role ?? '') !== 'PROJECT_CLIENT'));
+                $workerId = $defaultWorker ? $defaultWorker->id : (User::where('id', 60)->exists() ? 60 : ($project->created_by ?: Auth::id()));
+            }
+            return $workerId;
+        };
+
+        // Field normalization (list, due date, author, description) is applied ONCE per
+        // project. It used to run on every To-dos/task page view, which reverted any due
+        // date or description a user had changed on these checklist items.
+        $normalizeKey = 'bc_dep_tasks_normalized_v2_' . $project->id;
+        $shouldNormalize = !\Illuminate\Support\Facades\Cache::get($normalizeKey);
+        $nirdeshExists = $shouldNormalize && User::where('id', 148)->exists();
 
         foreach ($depTasks as $dt) {
             $meta = $depMeta[$dt->title] ?? null;
@@ -1054,23 +1071,25 @@ class ProjectController extends Controller
                 continue;
             }
             $updates = [];
-            if ($dt->list_name !== 'Dependency Checklist') {
-                $updates['list_name'] = 'Dependency Checklist';
-            }
-            if (empty($dt->created_by) || in_array((int) $dt->created_by, [1, 5, 60], true)) {
-                $updates['created_by'] = 148; // Nirdesh Verma (Added by Nirdesh V. on August 12, 2025)
-            }
-            $currentDue = $dt->due_date ? \Carbon\Carbon::parse($dt->due_date)->format('Y-m-d') : null;
-            if ($currentDue !== $meta['due_date']) {
-                $updates['due_date'] = $meta['due_date'];
-            }
-            if (!empty($meta['clear_desc']) && $dt->description !== null) {
-                $updates['description'] = null;
-            } elseif (!empty($meta['desc']) && empty($dt->description)) {
-                $updates['description'] = $meta['desc'];
-            }
-            if ($project->id != 26 && $dt->updated_at && \Carbon\Carbon::parse($dt->updated_at)->format('Y-m-d') === '2026-10-29' && $dt->id <= 16161) {
-                $updates['updated_at'] = '2025-09-02 14:20:00';
+            if ($shouldNormalize) {
+                if ($dt->list_name !== 'Dependency Checklist') {
+                    $updates['list_name'] = 'Dependency Checklist';
+                }
+                if ($nirdeshExists && (empty($dt->created_by) || in_array((int) $dt->created_by, [1, 5, 60], true))) {
+                    $updates['created_by'] = 148; // Nirdesh Verma (Added by Nirdesh V. on August 12, 2025)
+                }
+                $currentDue = $dt->due_date ? \Carbon\Carbon::parse($dt->due_date)->format('Y-m-d') : null;
+                if ($currentDue !== $meta['due_date']) {
+                    $updates['due_date'] = $meta['due_date'];
+                }
+                if (!empty($meta['clear_desc']) && $dt->description !== null) {
+                    $updates['description'] = null;
+                } elseif (!empty($meta['desc']) && empty($dt->description)) {
+                    $updates['description'] = $meta['desc'];
+                }
+                if ($project->id != 26 && $dt->updated_at && \Carbon\Carbon::parse($dt->updated_at)->format('Y-m-d') === '2026-10-29' && $dt->id <= 16161) {
+                    $updates['updated_at'] = '2025-09-02 14:20:00';
+                }
             }
             if (!empty($updates)) {
                 \Illuminate\Support\Facades\DB::table('tasks')->where('id', $dt->id)->update($updates);
@@ -1096,7 +1115,7 @@ class ProjectController extends Controller
                     foreach ($meta['comments'] as $cText) {
                         \Illuminate\Support\Facades\DB::table('task_comments')->insert([
                             'task_id' => $dt->id,
-                            'author_id' => $workerId,
+                            'author_id' => $resolveWorkerId(),
                             'content' => $cText,
                             'created_at' => '2025-09-02 14:20:00',
                             'updated_at' => '2025-09-02 14:20:00',
@@ -1104,6 +1123,10 @@ class ProjectController extends Controller
                     }
                 }
             }
+        }
+
+        if ($shouldNormalize) {
+            \Illuminate\Support\Facades\Cache::forever($normalizeKey, true);
         }
     }
 
@@ -1235,6 +1258,14 @@ class ProjectController extends Controller
             return;
         }
 
+        // One-time normalization of the imported Card Table leads. This used to run on
+        // every project/kanban/task page view (~24 queries) and silently reverted any
+        // edits users made to these cards (column moves, assignee, completion).
+        $cardFlagKey = 'bc_card_table_cards_normalized_v2_5';
+        if (\Illuminate\Support\Facades\Cache::get($cardFlagKey)) {
+            return;
+        }
+
         $cardMap = [
             16156 => [
                 'title' => 'Rajnish',
@@ -1268,7 +1299,18 @@ class ProjectController extends Controller
             ],
         ];
 
+        $existingCardIds = \Illuminate\Support\Facades\DB::table('tasks')
+            ->where('project_id', 5)
+            ->whereIn('id', array_keys($cardMap))
+            ->pluck('id')
+            ->map(fn($v) => (int) $v)
+            ->all();
+        $manjotExists = User::where('id', 1)->exists();
+
         foreach ($cardMap as $cardId => $meta) {
+            if (!in_array((int) $cardId, $existingCardIds, true)) {
+                continue;
+            }
             \Illuminate\Support\Facades\DB::table('tasks')
                 ->where('id', $cardId)
                 ->update([
@@ -1290,7 +1332,7 @@ class ProjectController extends Controller
                 ->where('author_id', 1)
                 ->exists();
 
-            if (!$hasManjotComment) {
+            if (!$hasManjotComment && $manjotExists) {
                 \Illuminate\Support\Facades\DB::table('task_comments')->insert([
                     'task_id' => $cardId,
                     'author_id' => 1,
@@ -1300,6 +1342,8 @@ class ProjectController extends Controller
                 ]);
             }
         }
+
+        \Illuminate\Support\Facades\Cache::forever($cardFlagKey, true);
     }
 
     public function showTask($id, $taskId)
@@ -1322,11 +1366,14 @@ class ProjectController extends Controller
             $this->seedProjectTemplateData($project, $tKey, $user);
         }
 
-        // Clean up any legacy auto-generated "Completed and verified..." comment on this task
-        \Illuminate\Support\Facades\DB::table('task_comments')
-            ->where('task_id', $taskId)
-            ->where('content', 'like', 'Completed and verified%')
-            ->delete();
+        // Clean up any legacy auto-generated "Completed and verified..." comments once
+        // (running it on every view could delete a real comment that starts that way)
+        if (!\Illuminate\Support\Facades\Cache::get('bc_legacy_completed_comments_cleaned_v2')) {
+            \Illuminate\Support\Facades\DB::table('task_comments')
+                ->where('content', 'like', 'Completed and verified%')
+                ->delete();
+            \Illuminate\Support\Facades\Cache::forever('bc_legacy_completed_comments_cleaned_v2', true);
+        }
 
         $task = Task::with(['assignee', 'creator', 'comments.author'])
             ->where('project_id', $project->id)
@@ -1663,12 +1710,23 @@ class ProjectController extends Controller
 
     private function ensureProjectCampfireHistory(Project $project): void
     {
-        if ((int) $project->id === 4 && ChatMessage::where('project_id', 4)->where('type', 'project')->whereDate('created_at', '2026-08-05')->doesntExist()) {
+        $pid = (int) $project->id;
+        if ($pid !== 4 && $pid !== 5) {
+            return;
+        }
+
+        // Only backfill once per project. Previously this ran on every page view and,
+        // whenever one historical message was missing (e.g. a user deleted it), it
+        // wiped ALL Campfire messages for the project — including real new messages.
+        $flagKey = 'bc_campfire_history_seeded_v2_' . $pid;
+        if (\Illuminate\Support\Facades\Cache::get($flagKey)) {
+            return;
+        }
+
+        if ($pid === 4 && ChatMessage::where('project_id', 4)->where('type', 'project')->whereDate('created_at', '2026-08-05')->doesntExist()) {
             $shivId = User::where('name', 'Shiv Narayan')->value('id') ?? 62;
             $shachishId = User::where('name', 'Shachish Sneh')->value('id') ?? 60;
             $gauravId = User::where('name', 'Gaurav Khulbey')->value('id') ?? 28;
-
-            ChatMessage::where('project_id', 4)->where('type', 'project')->delete();
 
             $hqHistory = [
                 ['sender_id' => $shivId, 'content' => '@Shachish', 'created_at' => '2026-08-05 10:57:00'],
@@ -1682,25 +1740,12 @@ class ProjectController extends Controller
                 ['sender_id' => $gauravId, 'content' => '[Attachment: 1000099830.jpg]', 'created_at' => '2026-10-06 12:15:00'],
             ];
 
-            foreach ($hqHistory as $row) {
-                $msg = new ChatMessage([
-                    'organization_id' => $project->organization_id ?? 1,
-                    'project_id' => 4,
-                    'sender_id' => $row['sender_id'],
-                    'type' => 'project',
-                    'content' => $row['content'],
-                ]);
-                $msg->created_at = \Carbon\Carbon::parse($row['created_at']);
-                $msg->updated_at = \Carbon\Carbon::parse($row['created_at']);
-                $msg->save(['timestamps' => false]);
-            }
-        } elseif ((int) $project->id === 5 && ChatMessage::where('project_id', 5)->where('type', 'project')->where('content', 'like', '%Group_51.png%')->doesntExist()) {
+            $this->insertMissingCampfireRows($project, 4, $hqHistory);
+        } elseif ($pid === 5 && ChatMessage::where('project_id', 5)->where('type', 'project')->where('content', 'like', '%Group_51.png%')->doesntExist()) {
             $amitId = User::where('name', 'like', '%Amit Rai%')->value('id') ?? 160;
             $manjotId = User::where('email', 'manjot@ajath.com')->value('id')
                 ?? User::where('name', 'like', '%Manjot%')->value('id')
                 ?? 1;
-
-            ChatMessage::where('project_id', 5)->where('type', 'project')->delete();
 
             $mgmtHistory = [
                 // Friday, September 3 2021
@@ -1758,18 +1803,44 @@ class ProjectController extends Controller
                 ['sender_id' => $amitId, 'content' => '[Attachment: mgmt_2.png]', 'created_at' => '2021-09-08 11:00:13'],
             ];
 
-            foreach ($mgmtHistory as $row) {
-                $msg = new ChatMessage([
-                    'organization_id' => $project->organization_id ?? 1,
-                    'project_id' => 5,
-                    'sender_id' => $row['sender_id'],
-                    'type' => 'project',
-                    'content' => $row['content'],
-                ]);
-                $msg->created_at = \Carbon\Carbon::parse($row['created_at']);
-                $msg->updated_at = \Carbon\Carbon::parse($row['created_at']);
-                $msg->save(['timestamps' => false]);
+            $this->insertMissingCampfireRows($project, 5, $mgmtHistory);
+        }
+
+        \Illuminate\Support\Facades\Cache::forever($flagKey, true);
+    }
+
+    /**
+     * Insert historical Campfire rows that are not already present, never deleting
+     * existing messages and skipping rows whose sender account does not exist.
+     */
+    private function insertMissingCampfireRows(Project $project, int $projectId, array $rows): void
+    {
+        $senderIds = array_values(array_unique(array_map(fn($r) => (int) $r['sender_id'], $rows)));
+        $existingSenders = User::whereIn('id', $senderIds)->pluck('id')->map(fn($v) => (int) $v)->all();
+
+        foreach ($rows as $row) {
+            if (!in_array((int) $row['sender_id'], $existingSenders, true)) {
+                continue;
             }
+            $ts = \Carbon\Carbon::parse($row['created_at']);
+            $alreadyThere = ChatMessage::where('project_id', $projectId)
+                ->where('type', 'project')
+                ->where('content', $row['content'])
+                ->where('created_at', $ts)
+                ->exists();
+            if ($alreadyThere) {
+                continue;
+            }
+            $msg = new ChatMessage([
+                'organization_id' => $project->organization_id ?? 1,
+                'project_id' => $projectId,
+                'sender_id' => $row['sender_id'],
+                'type' => 'project',
+                'content' => $row['content'],
+            ]);
+            $msg->created_at = $ts;
+            $msg->updated_at = $ts;
+            $msg->save(['timestamps' => false]);
         }
     }
 

@@ -20,6 +20,22 @@ class AdminlandController extends Controller
         $this->importer = $importer;
     }
 
+    /**
+     * Only workspace Owners/Admins may change who is an administrator.
+     * (Previously any signed-in member or client could POST here and make
+     * themselves ADMIN.)
+     */
+    private function ensureOrgAdmin(Organization $org, $user): void
+    {
+        $role = OrganizationMember::where('organization_id', $org->id)
+            ->where('user_id', $user->id)
+            ->value('role');
+
+        if (!in_array($role, ['OWNER', 'ADMIN'], true)) {
+            abort(403, 'Only Owners and Administrators can change administrators.');
+        }
+    }
+
     public function index()
     {
         $user = Auth::user();
@@ -57,6 +73,7 @@ class AdminlandController extends Controller
         $user = Auth::user();
         $orgId = session('active_org_id') ?: ($user->organizations()->first()?->id ?? 1);
         $org = Organization::findOrFail($orgId);
+        $this->ensureOrgAdmin($org, $user);
 
         $targetUserId = (int) $request->input('user_id');
         if ($targetUserId > 0) {
@@ -78,6 +95,7 @@ class AdminlandController extends Controller
         $user = Auth::user();
         $orgId = session('active_org_id') ?: ($user->organizations()->first()?->id ?? 1);
         $org = Organization::findOrFail($orgId);
+        $this->ensureOrgAdmin($org, $user);
 
         OrganizationMember::where('organization_id', $org->id)
             ->where('user_id', (int) $userId)

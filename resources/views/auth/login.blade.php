@@ -33,7 +33,7 @@
 
         {{-- Sign in with Google Button (Firebase workspace-bb7f2) --}}
         <button type="button"
-                onclick="if (window.bcSignInWithGoogle) { window.bcSignInWithGoogle({ csrfToken: '{{ csrf_token() }}', mode: 'login' }); } else { window.location.href = '{{ route('quick-login', 'owner') }}'; }"
+                onclick="if (window.bcSignInWithGoogle) { window.bcSignInWithGoogle({ csrfToken: '{{ csrf_token() }}', mode: 'login' }); } else { window.location.href = '{{ route('auth.google.redirect') }}?mode=login'; }"
                 class="w-full h-[40px] rounded-[6px] border border-[#d4d0c8] bg-white hover:bg-[#f7f5f2] flex items-center justify-center gap-2.5 text-[13.5px] font-bold text-[#1d1c1b] transition-colors cursor-pointer">
             <svg class="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>

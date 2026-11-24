@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\ChatController;
 
 // Public auth routes
 Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login'])->name('login');
+Route::post('/auth/login', [AuthController::class, 'login'])->name('api.login');
 
 // Protected routes (Sanctum authenticated)
 Route::middleware('auth:sanctum')->group(function () {

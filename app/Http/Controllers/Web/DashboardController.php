@@ -43,9 +43,16 @@ class DashboardController extends Controller
         ]);
 
         // Ensure 'Name the project' exists so the 20 Home projects match Basecamp 1:1
+        // (slug + created_by are NOT NULL columns, so they must be supplied on insert)
         Project::firstOrCreate(
             ['organization_id' => $currentOrg->id, 'name' => 'Name the project'],
-            ['description' => '', 'status' => 'ACTIVE', 'is_pinned' => false]
+            [
+                'slug' => 'name-the-project-' . $currentOrg->id,
+                'description' => '',
+                'status' => 'ACTIVE',
+                'is_pinned' => false,
+                'created_by' => $currentOrg->owner_id ?: $user->id,
+            ]
         );
 
         // Strict Project Access Control — ONLY active projects on Home

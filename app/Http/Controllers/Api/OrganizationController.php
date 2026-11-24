@@ -160,7 +160,7 @@ class OrganizationController extends Controller
             'project_ids.*' => 'integer',
         ]);
 
-        $defaultPassword = !empty($validated['password']) ? $validated['password'] : 'password123';
+        $defaultPassword = !empty($validated['password']) ? $validated['password'] : \Illuminate\Support\Str::random(40);
 
         // Find or create user
         $user = User::where('email', $validated['email'])->first();

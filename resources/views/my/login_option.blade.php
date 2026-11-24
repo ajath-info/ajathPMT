@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Change how you log in - Basecamp</title>
-    <script type="module" src="/js/firebase-init.js?v=20261030_5"></script>
+    <script type="module" src="/js/firebase-init.js?v=20261124_1"></script>
     <script>
         (function () {
             try {
@@ -18,7 +18,7 @@
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
     <style>
         [x-cloak] { display: none !important; }
         body {

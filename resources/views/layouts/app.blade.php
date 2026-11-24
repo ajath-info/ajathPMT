@@ -103,11 +103,11 @@
         }
     </script>
     <!-- Lucide Icons CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@1.79.0/dist/umd/lucide.min.js"></script>
     <!-- Alpine.js CDN -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.17.5/dist/cdn.min.js"></script>
     <!-- Firebase SDK (workspace-bb7f2) -->
-    <script type="module" src="/js/firebase-init.js?v=20261030_5"></script>
+    <script type="module" src="/js/firebase-init.js?v=20261124_1"></script>
     <style>
         [x-cloak] { display: none !important; }
         html {
@@ -2540,8 +2540,14 @@ class="min-h-full flex flex-col font-sans antialiased selection:bg-amber-400 sel
 
                     <!-- Recent Ping Conversations Below -->
                     @php
+                        // Only the signed-in user's own Ping conversations (previously this listed
+                        // the 15 latest private Pings between ANY users to everyone, incl. clients)
+                        $drawerUid = auth()->id();
                         $recentDrawerPings = \App\Models\ChatMessage::with(['sender', 'recipient'])
                             ->where('type', 'direct')
+                            ->where(function ($q) use ($drawerUid) {
+                                $q->where('sender_id', $drawerUid)->orWhere('recipient_id', $drawerUid);
+                            })
                             ->orderByDesc('id')
                             ->limit(15)
                             ->get();

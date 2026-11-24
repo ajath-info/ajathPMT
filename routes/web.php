@@ -16,8 +16,10 @@ Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle'])
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 Route::get('/quick-login/{role}', [AuthController::class, 'quickLogin'])->name('quick-login');
 Route::get('/clear-subpath-cookies', function (\Illuminate\Http\Request $request) {
-    $ret = $request->query('redirect', '/');
-    $html = '<!DOCTYPE html><html><head><script>document.cookie = "humans_21909=1; path=/"; window.location.replace(' . json_encode('/quick-login/manjot?redirect=' . $ret) . ');</script></head><body></body></html>';
+    // Clears duplicate sub-path cookies, then returns to the requested page. (It used to
+    // forward to /quick-login/manjot, which logged ANY visitor in as the owner.)
+    $ret = \App\Http\Controllers\Web\AuthController::safeRedirectPath($request->query('redirect', '/'), '/');
+    $html = '<!DOCTYPE html><html><head><script>document.cookie = "humans_21909=1; path=/"; window.location.replace(' . json_encode($ret) . ');</script></head><body></body></html>';
     return response($html, 200)
         ->header('Content-Type', 'text/html; charset=UTF-8')
         ->header('Clear-Site-Data', '"cookies"');

@@ -20,17 +20,52 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Create Organization
+        // 1. Create the primary owner first (organizations.owner_id is NOT NULL,
+        //    and the app treats user #1 / manjot@ajath.com as the workspace owner).
+        $owner = User::firstOrCreate(
+            ['email' => 'manjot@ajath.com'],
+            [
+                'name' => 'Manjot Singh',
+                'password' => Hash::make('password123'),
+                'job_title' => 'Global VP & Partner',
+                'avatar_url' => '/uploads/avatars/22369668.png',
+                'timezone' => 'Asia/Kolkata',
+            ]
+        );
+
         $org = Organization::firstOrCreate(
             ['slug' => 'ajath-infotech'],
             [
                 'name' => 'Ajath Infotech Pvt Ltd',
                 'description' => 'Enterprise mobile and web development agency.',
+                'owner_id' => $owner->id,
             ]
+        );
+
+        OrganizationMember::updateOrCreate(
+            ['organization_id' => $org->id, 'user_id' => $owner->id],
+            ['role' => 'OWNER', 'department' => 'Executive']
         );
 
         // 2. Create Users with realistic avatars & initials matching screenshot
         $usersData = [
+            [
+                'email' => 'shachish@ajath.com',
+                'name' => 'Shachish Sneh',
+                'job_title' => 'Solution Architect',
+                'role' => 'MEMBER',
+                'avatar_color' => 'bg-indigo-600',
+                'initials' => 'SS',
+            ],
+            [
+                'email' => 'dharmeshtripathi8@gmail.com',
+                'name' => 'Dharmesh Tripathi',
+                'job_title' => 'Client',
+                'role' => 'CLIENT',
+                'client_company' => 'Client Co',
+                'avatar_color' => 'bg-amber-600',
+                'initials' => 'DH',
+            ],
             [
                 'email' => 'claire.watson@ajath.com',
                 'name' => 'Claire Watson (SN)',
@@ -149,9 +184,7 @@ class DatabaseSeeder extends Seeder
             $users[$ud['initials']] = $user;
         }
 
-        // Set organization owner
-        $org->owner_id = $users['SN']->id;
-        $org->save();
+        $users['M'] = $owner;
 
         // 3. Exact projects from the attached Basecamp Screenshot!
         $projectsConfig = [
@@ -381,11 +414,22 @@ class DatabaseSeeder extends Seeder
                 ]
             );
 
-            // Assign members
-            foreach ($pConfig['members'] as $init) {
+            // Assign members (owner is always on every project; demo member/client
+            // personas used by /quick-login get access to a couple of projects)
+            $memberInits = $pConfig['members'];
+            $memberInits[] = 'M';
+            if (in_array($slug, ['ajath-infotech-pvt-ltd-hq', 'ride-my-cars-edward', 'tender'], true)) {
+                $memberInits[] = 'SS';
+            }
+            if ($slug === 'ride-my-cars-edward') {
+                $memberInits[] = 'DH';
+            }
+            foreach (array_unique($memberInits) as $init) {
                 if (isset($users[$init])) {
                     $u = $users[$init];
-                    $role = $u->email === 'edward.client@partner.com' ? 'PROJECT_CLIENT' : ($init === 'SN' ? 'PROJECT_LEAD' : 'PROJECT_MEMBER');
+                    $role = in_array($u->email, ['edward.client@partner.com', 'dharmeshtripathi8@gmail.com'], true)
+                        ? 'PROJECT_CLIENT'
+                        : ($init === 'M' ? 'PROJECT_ADMIN' : ($init === 'SN' ? 'PROJECT_LEAD' : 'PROJECT_MEMBER'));
                     ProjectMember::firstOrCreate([
                         'project_id' => $proj->id,
                         'user_id' => $u->id,

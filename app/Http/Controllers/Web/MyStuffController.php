@@ -812,28 +812,21 @@ class MyStuffController extends Controller
         }
         $people = $peopleQuery->limit(60)->get();
 
-        // Recent direct ping threads
+        // Recent direct ping threads — always scoped to the signed-in user's own
+        // conversations (search previously matched private Pings between other people,
+        // and an empty inbox fell back to listing everyone's latest Pings)
         $recentPings = ChatMessage::with(['sender', 'recipient'])
             ->where('type', 'direct')
-            ->where(function ($q) use ($user, $search) {
-                if ($search !== '') {
-                    $q->where('content', 'LIKE', '%' . $search . '%');
-                } else {
-                    $q->where('sender_id', $user->id)
-                      ->orWhere('recipient_id', $user->id);
-                }
+            ->where(function ($q) use ($user) {
+                $q->where('sender_id', $user->id)
+                  ->orWhere('recipient_id', $user->id);
+            })
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where('content', 'LIKE', '%' . $search . '%');
             })
             ->orderByDesc('created_at')
             ->limit(80)
             ->get();
-
-        if ($recentPings->isEmpty() && $search === '') {
-            $recentPings = ChatMessage::with(['sender', 'recipient'])
-                ->where('type', 'direct')
-                ->orderByDesc('id')
-                ->limit(60)
-                ->get();
-        }
 
         $targetUser = null;
         $messages = collect();
@@ -862,7 +855,11 @@ class MyStuffController extends Controller
             ->limit(200)
             ->get();
 
-        if ($messages->isEmpty()) {
+        // Imported Basecamp Ping history belongs to the workspace owner (Manjot, user #1).
+        // Only restore it for that account — previously ANY user opening these people's
+        // Ping pages got the owner's private history written into their own inbox.
+        $isHistoryOwner = (int) $user->id === 1 || strtolower((string) $user->email) === 'manjot@ajath.com';
+        if ($messages->isEmpty() && $isHistoryOwner && in_array((int) $targetUser->id, [62, 202, 153, 146, 147, 148, 149, 60], true)) {
             $seedThreads = [
                 62 => [
                     ['sender' => 62, 'time' => '2026-08-05 05:31:21', 'text' => 'hii sir good morning'],

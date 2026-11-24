@@ -16,6 +16,29 @@ use App\Models\ProjectMember;
 
 class PeopleController extends Controller
 {
+    /**
+     * Signed token embedded in invitation emails (/join/{id}?token=...).
+     */
+    public static function inviteTokenFor(User $user): string
+    {
+        return hash_hmac('sha256', $user->id . '|' . strtolower((string) $user->email), (string) config('app.key', 'ajath-basecamp-secret'));
+    }
+
+    /**
+     * An invitation token is valid only if it matches this user AND the invitation has not
+     * been accepted yet (accounts that have already joined/logged in can't be taken over
+     * through an old link).
+     */
+    public static function inviteTokenIsValid(?User $user, ?string $token): bool
+    {
+        if (!$user || !is_string($token) || $token === '') {
+            return false;
+        }
+        if (!empty($user->email_verified_at)) {
+            return false;
+        }
+        return hash_equals(self::inviteTokenFor($user), $token);
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -112,7 +135,7 @@ class PeopleController extends Controller
                 $user = User::create([
                     'name' => $name,
                     'email' => $email,
-                    'password' => Hash::make('password123'),
+                    'password' => Hash::make(\Illuminate\Support\Str::random(40)), // set by the invitee via the join link
                     'job_title' => !empty($p['job_title']) ? $p['job_title'] : ($role === 'CLIENT' ? 'Client Representative' : 'Product Owner'),
                     'avatar_url' => 'https://api.dicebear.com/7.x/initials/svg?seed=' . urlencode($name),
                     'timezone' => 'Asia/Kolkata',
@@ -180,6 +203,7 @@ class PeopleController extends Controller
 
         $activeProjects = Project::where('organization_id', $org->id)
             ->where('status', '!=', 'ARCHIVED')
+            ->withCount('members')
             ->orderBy('name')
             ->get();
 
@@ -203,7 +227,7 @@ class PeopleController extends Controller
         foreach ($activeProjects as $p) {
             $ln = strtolower(trim($p->name));
             $meta = $curatedMeta[$ln] ?? null;
-            $memberCount = max(2, $p->members()->count());
+            $memberCount = max(2, (int) $p->members_count);
             $isCli = $meta ? $meta['isClientProject'] : (!empty($p->client_subtitle) || str_contains($ln, 'edward') || str_contains($ln, 'app'));
             $sub = $meta
                 ? $meta['subtitle']
@@ -309,7 +333,7 @@ class PeopleController extends Controller
         $inviterName = $inviter?->name ?? 'Manjot Singh';
         $inviterFirstName = explode(' ', trim($inviterName))[0] ?: 'Manjot';
         $orgName = $org->name ?? 'Ajath Infotech Pvt Ltd';
-        $token = hash_hmac('sha256', $invitedUser->id . '|' . strtolower($invitedUser->email), config('app.key', 'ajath-basecamp-secret'));
+        $token = self::inviteTokenFor($invitedUser);
         $baseUrl = rtrim(config('app.url', 'https://workspace.ajath.com'), '/');
         if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
             $baseUrl = 'https://workspace.ajath.com';
@@ -368,6 +392,13 @@ HTML;
             $senderDisplayName = "{$inviterName} (Basecamp)";
             $replyToEmail = $inviter?->email ?: 'workspace@ajath.com';
 
+            // SMTP credentials must come from .env (MAIL_PASSWORD etc.) — never from source code.
+            $smtpPassword = env('MAIL_PASSWORD');
+            if (empty($smtpPassword) || $smtpPassword === 'null') {
+                Log::error('Invitation email to ' . $invitedUser->email . ' not sent: MAIL_PASSWORD is not set in .env');
+                return;
+            }
+
             config([
                 'mail.default' => 'smtp',
                 'mail.mailers.smtp.transport' => 'smtp',
@@ -375,7 +406,8 @@ HTML;
                 'mail.mailers.smtp.port' => (int) env('MAIL_PORT', 465),
                 'mail.mailers.smtp.encryption' => env('MAIL_ENCRYPTION', 'ssl'),
                 'mail.mailers.smtp.username' => env('MAIL_USERNAME', 'workspace@ajath.com'),
-                'mail.mailers.smtp.password' => env('MAIL_PASSWORD', 'mS#l,;f+uTzk'),
+                'mail.mailers.smtp.password' => $smtpPassword,
+                'mail.mailers.smtp.timeout' => 15,
                 'mail.mailers.smtp.local_domain' => env('MAIL_EHLO_DOMAIN', 'workspace.ajath.com'),
                 'mail.from.address' => 'workspace@ajath.com',
                 'mail.from.name' => $senderDisplayName,
@@ -402,24 +434,35 @@ HTML;
     public function declineJoin(Request $request, $userId)
     {
         $user = User::find($userId);
-        if ($user) {
-            OrganizationMember::where('user_id', $user->id)->delete();
-            ProjectMember::where('user_id', $user->id)->delete();
+        // Requires the invitation token (previously anyone could remove ANY user, including
+        // the owner, from the company by visiting /join/{id}/decline)
+        if (!self::inviteTokenIsValid($user, (string) $request->query('token', ''))) {
+            return redirect('/login')->with('error', 'This invitation link is invalid or has already been used.');
         }
+        OrganizationMember::where('user_id', $user->id)->delete();
+        ProjectMember::where('user_id', $user->id)->delete();
         return redirect('/login')->with('status', 'Your invitation has been declined.');
     }
 
     public function showJoinForm(Request $request, $userId)
     {
         $user = User::findOrFail($userId);
-        $org = $user->organizations()->first() ?? Organization::first();
         $token = (string) $request->query('token', '');
+        if (!self::inviteTokenIsValid($user, $token)) {
+            return redirect('/login')->with('error', 'This invitation link is invalid or has already been used. If you already joined, please log in.');
+        }
+        $org = $user->organizations()->first() ?? Organization::first();
         return view('people.join', compact('user', 'org', 'token'));
     }
 
     public function completeJoin(Request $request, $userId)
     {
         $user = User::findOrFail($userId);
+        // Requires the invitation token (previously anyone could POST here and set a new
+        // password for ANY account, then be logged in as that user)
+        if (!self::inviteTokenIsValid($user, (string) $request->input('token', ''))) {
+            return redirect('/login')->with('error', 'This invitation link is invalid or has already been used. If you already joined, please log in.');
+        }
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'job_title' => 'nullable|string|max:255',
@@ -428,7 +471,7 @@ HTML;
 
         $user->update([
             'name' => $validated['name'],
-            'job_title' => $validated['job_title'] ?: $user->job_title,
+            'job_title' => ($validated['job_title'] ?? null) ?: $user->job_title,
             'password' => Hash::make($validated['password']),
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
